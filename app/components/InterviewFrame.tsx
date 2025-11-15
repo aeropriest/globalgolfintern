@@ -22,20 +22,29 @@ export default function InterviewFrame({ candidateId, candidateName, candidateEm
   useEffect(() => {
     const createOrGetInterview = async () => {
       try {
+        console.log('🎬 InterviewFrame: Starting interview creation process');
+        console.log(`🧑‍💼 Candidate: ${candidateName} (${candidateEmail})`);
+        console.log(`🆔 Candidate ID: ${candidateId}`);
+        
         setLoading(true);
         setError(null);
 
         // Get positions (in a real app, you might let the user select a position)
+        console.log('📋 Fetching available positions...');
         const positions = await HireflixService.getPositions();
+        console.log(`📋 Found ${positions.length} positions:`, positions.map(p => p.title).join(', '));
         
         if (!positions || positions.length === 0) {
+          console.error('❌ No positions available for interview');
           throw new Error('No positions available for interview');
         }
 
         // Use the first position for this example
         const positionId = positions[0].id;
+        console.log(`📌 Selected position: ${positions[0].title} (${positionId})`);
 
         // Create interview
+        console.log('🔄 Creating interview with Hireflix...');
         const response = await HireflixService.createInterview(
           positionId,
           candidateEmail,
@@ -43,23 +52,36 @@ export default function InterviewFrame({ candidateId, candidateName, candidateEm
           candidateId
         );
 
+        console.log('📊 Hireflix response:', JSON.stringify(response, null, 2));
+
         if (!response.success) {
+          console.error('❌ Failed to create interview:', response.message);
           throw new Error(response.message || 'Failed to create interview');
         }
 
         // Save interview data to Firebase
         if (response.interview.interview_url) {
-          await FirebaseService.createInterview(
+          console.log('💾 Saving interview data to Firebase...');
+          console.log(`🔗 Interview URL: ${response.interview.interview_url}`);
+          console.log(`🆔 Interview ID: ${response.interview.id}`);
+          
+          const saveResult = await FirebaseService.createInterview(
             candidateEmail,
             response.interview.id,
             response.interview.interview_url
           );
+          
+          console.log(`💾 Firebase save result: ${saveResult ? 'Success' : 'Failed'}`);
+        } else {
+          console.warn('⚠️ No interview URL provided in response');
         }
 
+        console.log('✅ Interview setup complete');
         setInterviewId(response.interview.id);
         setInterviewUrl(response.interview.interview_url);
       } catch (error) {
-        console.error('Error creating interview:', error);
+        console.error('❌ Error creating interview:', error);
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         setError(error instanceof Error ? error.message : 'An unexpected error occurred');
       } finally {
         setLoading(false);

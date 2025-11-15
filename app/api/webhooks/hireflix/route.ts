@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../firebase/config';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
 
 interface HireflixWebhookPayload {
   event: string;
@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
   console.log('\n' + '='.repeat(80));
   console.log(`🔔 HIREFLIX WEBHOOK RECEIVED AT ${timestamp}`);
   console.log('='.repeat(80));
+  console.log(`📌 PROCESS ID: ${process.pid}`);
+  console.log(`📌 NODE ENV: ${process.env.NODE_ENV}`);
   
   try {
     console.log('📡 Request Details:');
@@ -148,10 +150,15 @@ async function updateApplicationWithInterviewResults(payload: HireflixWebhookPay
       return;
     }
     
+    console.log(`🔍 Looking for application with email: ${candidateEmail}`);
+    
     // Find application by email
     const applicationsRef = collection(db, 'applications');
     const q = query(applicationsRef, where('email', '==', candidateEmail));
+    console.log(`🔍 Executing Firestore query: ${q}`);
+    
     const querySnapshot = await getDocs(q);
+    console.log(`📊 Query results: ${querySnapshot.size} documents found`);
     
     if (querySnapshot.empty) {
       console.warn(`⚠️ No application found with email: ${candidateEmail}`);
@@ -160,21 +167,50 @@ async function updateApplicationWithInterviewResults(payload: HireflixWebhookPay
     
     const applicationDoc = querySnapshot.docs[0];
     const applicationId = applicationDoc.id;
+    const currentData = applicationDoc.data();
     
-    // Update application with interview results
-    await updateDoc(doc(db, 'applications', applicationId), {
+    console.log(`📋 Found application: ${applicationId}`);
+    console.log(`📋 Current application data:`, JSON.stringify({
+      name: currentData.name,
+      email: currentData.email,
+      position: currentData.position,
+      surveyCompleted: currentData.surveyCompleted,
+      interviewStatus: currentData.interviewStatus
+    }, null, 2));
+    
+    // Prepare update data
+    const updateData = {
       interviewCompleted: true,
       interviewId: payload.data?.id,
       interviewStatus: 'completed',
       interviewVideoUrl: payload.data?.url?.public,
       interviewShareUrl: payload.data?.url?.short,
       interviewCompletedAt: new Date().toISOString()
-    });
+    };
+    
+    console.log(`📤 Updating application with data:`, JSON.stringify(updateData, null, 2));
+    
+    // Update application with interview results
+    await updateDoc(doc(db, 'applications', applicationId), updateData);
     
     console.log(`✅ Updated application ${applicationId} with interview results`);
     
+    // Verify the update
+    const updatedDoc = await getDoc(doc(db, 'applications', applicationId));
+    const updatedData = updatedDoc.data();
+    
+    console.log(`📋 Updated application data:`, JSON.stringify({
+      name: updatedData?.name,
+      email: updatedData?.email,
+      interviewCompleted: updatedData?.interviewCompleted,
+      interviewStatus: updatedData?.interviewStatus,
+      interviewVideoUrl: updatedData?.interviewVideoUrl ? '✓ Present' : '✗ Missing',
+      interviewCompletedAt: updatedData?.interviewCompletedAt
+    }, null, 2));
+    
   } catch (error) {
     console.error('❌ Error updating application with interview results:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
 }
