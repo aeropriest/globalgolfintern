@@ -240,10 +240,10 @@ export default function SurveyPage() {
         traitScores
       }));
       
-      // Redirect after a delay
+      // Redirect to interview page after a delay
       setTimeout(() => {
-        router.push(`/status/${candidateId}`);
-      }, 5000);
+        router.push(`/interview/${candidateId}`);
+      }, 3000);
       
     } catch (error) {
       console.error('Survey submission error:', error);

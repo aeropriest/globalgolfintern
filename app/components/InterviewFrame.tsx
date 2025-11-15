@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { HireflixService } from '../services/hireflix';
 import { FirebaseService } from '../services/firebase';
 import { Loader } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 interface InterviewFrameProps {
   candidateId: string;
@@ -91,23 +93,56 @@ export default function InterviewFrame({ candidateId, candidateName, candidateEm
     createOrGetInterview();
   }, [candidateId, candidateName, candidateEmail]);
 
-  // Listen for interview completion via webhook
+  // Poll for interview completion
   useEffect(() => {
-    // In a real application, you would implement a polling mechanism or WebSocket
-    // to check if the interview has been completed
+    if (!interviewId || !candidateEmail || isCompleted) return;
     
-    // For this example, we'll simulate completion after 30 seconds
-    if (interviewUrl && !isCompleted) {
-      const timer = setTimeout(() => {
-        setIsCompleted(true);
-        if (onComplete) {
-          onComplete();
+    console.log('🕐 Starting polling mechanism to check interview completion');
+    
+    const checkInterviewStatus = async () => {
+      try {
+        // In a real app, this would be an API call to check the interview status
+        // For now, we'll check Firebase directly
+        const applicationsRef = collection(db, 'applications');
+        const q = query(applicationsRef, where('email', '==', candidateEmail));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const applicationDoc = querySnapshot.docs[0];
+          const data = applicationDoc.data();
+          
+          console.log('🔍 Polling: Checking interview status for', candidateEmail);
+          
+          if (data.interviewCompleted) {
+            console.log('✅ Polling: Interview completed detected!');
+            setIsCompleted(true);
+            if (onComplete) {
+              onComplete();
+            }
+            return true; // Stop polling
+          }
         }
-      }, 30000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [interviewUrl, isCompleted, onComplete]);
+        return false; // Continue polling
+      } catch (error) {
+        console.error('❌ Error checking interview status:', error);
+        return false;
+      }
+    };
+    
+    // Check immediately
+    checkInterviewStatus();
+    
+    // Then check every 10 seconds
+    const intervalId = setInterval(async () => {
+      const shouldStop = await checkInterviewStatus();
+      if (shouldStop) {
+        clearInterval(intervalId);
+      }
+    }, 10000);
+    
+    // Cleanup
+    return () => clearInterval(intervalId);
+  }, [interviewId, candidateEmail, isCompleted, onComplete]);
 
   if (loading) {
     return (
@@ -163,15 +198,40 @@ export default function InterviewFrame({ candidateId, candidateName, candidateEm
 
   return (
     <div className="w-full h-full">
-      <iframe
-        src={interviewUrl}
-        className="w-full h-[80vh] border-0 rounded-lg shadow-lg"
-        allow="camera; microphone; fullscreen"
-        title="Hireflix Interview"
-      />
-      <div className="mt-4 text-sm text-gray-500">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-4">
+        <h3 className="text-lg font-medium text-blue-800 mb-2">Video Interview Instructions</h3>
+        <p className="text-gray-700 mb-4">
+          <strong>Important:</strong> Please ensure you are in a quiet environment with good lighting.
+          This interview requires access to your camera and microphone. You will be asked several
+          questions to answer via video recording.
+        </p>
+        <p className="text-gray-700 mb-2">
+          When you're ready, the interview will appear below. Follow the on-screen instructions to complete each question.
+        </p>
+      </div>
+      
+      <div className="relative w-full h-[70vh] bg-gray-100 rounded-lg shadow-lg overflow-hidden">
+        {interviewUrl ? (
+          <iframe
+            src={interviewUrl}
+            className="absolute top-0 left-0 w-full h-full border-0"
+            allow="camera; microphone; fullscreen"
+            title="Hireflix Interview"
+            id="hireflix-interview-frame"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">Loading interview...</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-4 text-sm text-gray-500 flex items-center justify-between">
         <p>
-          Note: This interview requires access to your camera and microphone. Please allow access when prompted.
+          Having technical issues? <button className="text-pink-600 underline" onClick={() => window.location.reload()}>Refresh the page</button>
+        </p>
+        <p>
+          Interview ID: <span className="font-mono">{interviewId?.substring(0, 8)}...</span>
         </p>
       </div>
     </div>

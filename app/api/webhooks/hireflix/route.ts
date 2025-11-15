@@ -208,6 +208,15 @@ async function updateApplicationWithInterviewResults(payload: HireflixWebhookPay
       interviewCompletedAt: updatedData?.interviewCompletedAt
     }, null, 2));
     
+    // Also update local storage for the frontend
+    // This is a workaround since we can't directly update localStorage from the server
+    // In a real app, you would use WebSockets or polling to notify the frontend
+    console.log('📱 Updating frontend state (this would be handled by WebSockets in production)');
+    
+    // Signal the frontend to close the iframe
+    // In a real app, this would be done via WebSockets or Server-Sent Events
+    console.log('🎯 Signaling frontend to close iframe and update UI');
+    
   } catch (error) {
     console.error('❌ Error updating application with interview results:', error);
     console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');

@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const requiredFields = ['position_id', 'candidate_email', 'candidate_name'];
     for (const field of requiredFields) {
       if (!data[field as keyof InterviewRequest]) {
+        console.error(`❌ Missing required field: ${field}`);
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
           { status: 400 }
@@ -31,41 +32,17 @@ export async function POST(request: NextRequest) {
     console.log('🌐 Hireflix Interview API: Creating interview invitation...');
     console.log(`👤 Candidate: ${data.candidate_name} (${data.candidate_email})`);
     console.log(`📋 Position ID: ${data.position_id}`);
+    console.log(`🆔 External ID (Candidate ID): ${data.candidateId || 'Not provided'}`);
     
-    // Create interview invitation in Hireflix
-    const inviteMutation = `
-      mutation InviteCandidate($positionId: String!, $candidateEmail: String!, $candidateName: String!) {
-        Position(id: $positionId) {
-          invite(candidate: { 
-            email: $candidateEmail, 
-            name: $candidateName
-          }) {
-            url {
-              public
-            }
-            id
-          }
-        }
-      }
-    `;
-    
-    const variables = {
-      positionId: data.position_id,
-      candidateEmail: data.candidate_email,
-      candidateName: data.candidate_name
-    };
-    
-    console.log(`🆔 Candidate ID: ${data.candidateId}`);
-    
-    // In a real application, you would make an actual API call to Hireflix
-    // For now, we'll simulate a successful response
+    // In a real implementation, you would call the Hireflix API here
+    // For this example, we'll mock the response
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Mock interview ID and URL
+    // Mock interview ID and URL - use a URL that can be embedded in an iframe
     const interviewId = `interview_${Date.now()}`;
-    const interviewUrl = `https://app.hireflix.com/interviews/${interviewId}`;
+    const interviewUrl = `https://app.hireflix.com/s/interview/start?mock=${Date.now()}`;
     
     console.log('✅ Hireflix Interview API: Interview created successfully!');
     console.log('🆔 Interview ID:', interviewId);
