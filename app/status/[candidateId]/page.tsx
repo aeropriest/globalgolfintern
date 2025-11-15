@@ -115,19 +115,19 @@ export default function StatusPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium">{candidateInfo.name}</p>
+                    <p className="font-medium text-black">{candidateInfo.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{candidateInfo.email}</p>
+                    <p className="font-medium text-black">{candidateInfo.email}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Position</p>
-                    <p className="font-medium">{candidateInfo.position || "Golf Internship"}</p>
+                    <p className="font-medium text-black">{candidateInfo.position || "Golf Internship"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Application Date</p>
-                    <p className="font-medium">
+                    <p className="font-medium text-black">
                       {applicationStatus?.timestamp ? new Date(applicationStatus.timestamp).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
@@ -253,7 +253,7 @@ export default function StatusPage() {
             </div>
             
             {/* Contact Info */}
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-6">
+            {/* <div className="bg-blue-50 border border-blue-100 rounded-lg p-6">
               <h3 className="text-lg font-medium text-blue-800 mb-2">Need Help?</h3>
               <p className="text-blue-700 mb-4">
                 If you have any questions about your application or the internship program, please contact us.
@@ -264,7 +264,7 @@ export default function StatusPage() {
               <p className="text-blue-700">
                 Phone: +1 (555) 123-4567
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

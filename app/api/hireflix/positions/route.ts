@@ -1,62 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// In a real application, you would store this in an environment variable
-const HIREFLIX_API_KEY = process.env.NEXT_PUBLIC_HIREFLIX_API_KEY || 'your-hireflix-api-key';
+import { HIREFLIX_API_KEY } from '../../../config';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📋 Hireflix Positions API: Received positions request');
+    console.log('📋 Hireflix API: Fetching positions...');
     
-    // In a real application, you would make an actual API call to Hireflix
-    // For now, we'll return mock positions
-    
-    // Mock positions data
-    const positions = [
-      {
-        id: 'pos_1',
-        title: 'Golf Operations Intern',
-        description: 'Join our team as a Golf Operations Intern and gain valuable experience in the golf industry.',
-        location: 'New York, USA',
-        department: 'Operations',
-        employment_type: 'Internship',
-        status: 'open',
-        created_at: '2025-01-01T00:00:00Z',
-        updated_at: '2025-01-01T00:00:00Z'
-      },
-      {
-        id: 'pos_2',
-        title: 'Golf Course Management Intern',
-        description: 'Learn about golf course management and maintenance in this hands-on internship.',
-        location: 'Florida, USA',
-        department: 'Course Management',
-        employment_type: 'Internship',
-        status: 'open',
-        created_at: '2025-01-02T00:00:00Z',
-        updated_at: '2025-01-02T00:00:00Z'
-      },
-      {
-        id: 'pos_3',
-        title: 'Golf Marketing Intern',
-        description: 'Develop marketing strategies for golf courses and tournaments.',
-        location: 'California, USA',
-        department: 'Marketing',
-        employment_type: 'Internship',
-        status: 'open',
-        created_at: '2025-01-03T00:00:00Z',
-        updated_at: '2025-01-03T00:00:00Z'
+    // Use the real Hireflix API to get positions
+    const query = `
+      query {
+        positions {
+          id
+          name
+          archived
+        }
       }
-    ];
+    `;
+    
+    const response = await fetch('https://api.hireflix.com/me', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': HIREFLIX_API_KEY,
+      },
+      body: JSON.stringify({ query }),
+    });
+    
+    const data = await response.json();
+    
+    if (data.errors) {
+      console.error('❌ Hireflix API Error:', data.errors);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch positions from Hireflix' },
+        { status: 500 }
+      );
+    }
+    
+    const positions = data.data?.positions || [];
+    
+    // Filter active positions only
+    const activePositions = positions.filter((pos: any) => !pos.archived);
+    
+    // Transform positions for frontend
+    const transformedPositions = activePositions.map((pos: any) => ({
+      id: pos.id,
+      title: pos.name,
+      description: 'Golf internship opportunity',
+      location: 'Various Locations',
+      department: 'Operations',
+      employment_type: 'Internship',
+      status: 'open',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
     
     return NextResponse.json({
-      success: true,
-      positions: positions,
-      source: 'mock_data'
+      positions: transformedPositions
     });
     
   } catch (error) {
-    console.error('💥 Hireflix Positions API: Unexpected error:', error);
+    console.error('Error fetching positions:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch positions. Please try again.' },
+      { success: false, error: 'Failed to fetch positions' },
       { status: 500 }
     );
   }

@@ -1,5 +1,7 @@
 'use client';
 
+import { HIREFLIX_API_KEY, HIREFLIX_POSITION_ID } from '../config';
+
 export interface HireflixPosition {
   id: string;
   title: string;
@@ -21,6 +23,8 @@ export interface HireflixInterview {
   created_at: string;
   existing_candidate?: boolean;
   candidateId?: string;
+  transcript_url?: string;
+  resume_url?: string;
 }
 
 export interface HireflixInterviewResponse {
@@ -31,6 +35,27 @@ export interface HireflixInterviewResponse {
 }
 
 export class HireflixService {
+  static async getPositions(): Promise<HireflixPosition[]> {
+    try {
+      const response = await fetch('/api/hireflix/positions', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch positions: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.positions || [];
+    } catch (error) {
+      console.error('Error fetching Hireflix positions:', error);
+      return [];
+    }
+  }
+
   static async createInterview(positionId: string, candidateEmail: string, candidateName: string, candidateId?: string): Promise<HireflixInterviewResponse> {
     try {
       const response = await fetch('/api/hireflix/interviews', {
@@ -55,27 +80,6 @@ export class HireflixService {
     } catch (error) {
       console.error('Error creating Hireflix interview:', error);
       throw error;
-    }
-  }
-
-  static async getPositions(): Promise<HireflixPosition[]> {
-    try {
-      const response = await fetch('/api/hireflix/positions', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch positions: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.positions || [];
-    } catch (error) {
-      console.error('Error fetching Hireflix positions:', error);
-      return [];
     }
   }
 }

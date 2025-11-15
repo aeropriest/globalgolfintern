@@ -69,7 +69,6 @@ export default function SurveyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [submitSuccess, setSubmitSuccess] = useState(false);
   
   // Initialize answers state with empty values
   const [answers, setAnswers] = useState<Record<string, Record<number, number>>>({
@@ -230,9 +229,6 @@ export default function SurveyPage() {
       }
 
 
-      // Show success message
-      setSubmitSuccess(true);
-      
       // Save survey completion status to localStorage
       localStorage.setItem(`survey_completed_${candidateId}`, JSON.stringify({
         completed: true,
@@ -240,10 +236,8 @@ export default function SurveyPage() {
         traitScores
       }));
       
-      // Redirect to interview page after a delay
-      setTimeout(() => {
-        router.push(`/interview/${candidateId}`);
-      }, 3000);
+      // Redirect to interview page immediately
+      router.push(`/interview/${candidateId}`);
       
     } catch (error) {
       console.error('Survey submission error:', error);
@@ -266,32 +260,8 @@ export default function SurveyPage() {
     );
   }
 
-
-  if (submitSuccess) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 bg-gray-50">
-        <div className="bg-white p-8 md:p-12 rounded-2xl border border-gray-200 shadow-xl w-full max-w-3xl text-center">
-          <CheckCircle className="h-20 w-20 text-green-500 mx-auto mb-6" />
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-            Thank You for Completing the Survey!
-          </h1>
-          <p className="text-gray-600 text-lg mb-8">
-            Your responses have been recorded successfully. We appreciate your participation!
-          </p>
-          <div className="mt-8">
-            <GradientButton
-              onClick={() => router.push(`/status/${candidateId}`)}
-              variant="filled"
-              size="lg"
-            >
-              Return to Application Status
-            </GradientButton>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // We don't need a success message anymore since we redirect immediately
+  // Removed the success message block
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 bg-gray-50">
@@ -306,10 +276,10 @@ export default function SurveyPage() {
           <div className="bg-gray-50 p-4 rounded-lg mb-8">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Your Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <p><span className="font-medium">Name:</span> {candidateInfo.name}</p>
-              <p><span className="font-medium">Email:</span> {candidateInfo.email}</p>
+              <p className="font-medium text-gray-600"><span className="font-medium text-gray-600">Name:</span> {candidateInfo.name}</p>
+              <p className="font-medium text-gray-600"><span className="font-medium text-gray-600">Email:</span> {candidateInfo.email}</p>
               {candidateInfo.position && (
-                <p><span className="font-medium">Position:</span> {candidateInfo.position}</p>
+                <p className="font-medium text-gray-600"><span className="font-medium text-gray-600">Position:</span> {candidateInfo.position}</p>
               )}
             </div>
           </div>

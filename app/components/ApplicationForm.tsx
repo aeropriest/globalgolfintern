@@ -11,17 +11,17 @@ import '../styles/gradient-inputs.css';
 type FormState = 'idle' | 'submitting' | 'success' | 'error';
 
 const ApplicationForm: React.FC = () => {
-  // Pre-filled values for testing
-  const [name, setName] = useState('John Smith');
-  const [email, setEmail] = useState('test@example.com');
-  const [phone, setPhone] = useState('+1 555-123-4567');
-  const [location, setLocation] = useState('New York, USA');
-  const [selectedPosition, setSelectedPosition] = useState('golf-operations');
+  // Form state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [message, setMessage] = useState('I am very interested in this internship opportunity and have experience working at my local golf club.');
+  const [message, setMessage] = useState('');
   const [formState, setFormState] = useState<FormState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const [consentChecked, setConsentChecked] = useState(true);
+  const [consentChecked, setConsentChecked] = useState(false);
   const router = useRouter();
 
   const positions = [
@@ -54,6 +54,14 @@ const ApplicationForm: React.FC = () => {
     setErrorMessage('');
     
     try {
+      // Check if an application with this email already exists
+      const applicationExists = await FirebaseService.checkApplicationExists(email);
+      
+      if (applicationExists) {
+        setErrorMessage('An application with this email already exists. Please use a different email address or contact support if you need to update your existing application.');
+        setFormState('error');
+        return;
+      }
       // Upload resume if provided
       let resumeUrl = '';
       if (resumeFile) {

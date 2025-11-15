@@ -33,6 +33,19 @@ export interface ApplicationData {
 
 // Define the service as a plain object with methods
 const FirebaseServiceImpl = {
+  // Check if an application with the given email already exists
+  checkApplicationExists: async (email: string): Promise<boolean> => {
+    try {
+      const applicationsRef = collection(db, 'applications');
+      const q = query(applicationsRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error('Error checking if application exists:', error);
+      throw error;
+    }
+  },
   // Upload resume to Firebase Storage
   uploadResume: async (file: File, candidateId: string): Promise<string> => {
     try {
@@ -109,6 +122,34 @@ const FirebaseServiceImpl = {
     } catch (error) {
       console.error('Error updating application with survey results:', error);
       throw error;
+    }
+  },
+  
+  // Check if a candidate has already been invited to an interview
+  checkInterviewExists: async (email: string): Promise<{exists: boolean, interviewUrl?: string}> => {
+    try {
+      const applicationsRef = collection(db, 'applications');
+      const q = query(applicationsRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return { exists: false };
+      }
+      
+      const applicationDoc = querySnapshot.docs[0];
+      const applicationData = applicationDoc.data();
+      
+      if (applicationData.interviewId && applicationData.interviewUrl) {
+        return { 
+          exists: true, 
+          interviewUrl: applicationData.interviewUrl 
+        };
+      }
+      
+      return { exists: false };
+    } catch (error) {
+      console.error('Error checking if interview exists:', error);
+      return { exists: false };
     }
   },
   

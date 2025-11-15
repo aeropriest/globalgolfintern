@@ -29,197 +29,77 @@ interface HireflixWebhookPayload {
   date?: number;
 }
 
-// GET - Webhook info and health check
-export async function GET(request: NextRequest) {
-  const timestamp = new Date().toISOString();
-  console.log(`📋 Hireflix Webhook GET request at ${timestamp}`);
-  
+// GET - Webhook info
+export async function GET() {
   return NextResponse.json({
-    webhook: "Global Golf Intern - Hireflix Interview Monitor",
-    status: "active",
-    timestamp: timestamp,
-    events: ["interview.status-change"],
-    description: "Monitors Hireflix interview process and updates application status",
-    setup: {
-      url: `${request.nextUrl.origin}/api/webhooks/hireflix`,
-      method: "POST",
-      events: ["interview.status-change"]
-    }
+    webhook: "Global Golf Intern - Hireflix",
+    status: "active"
   });
 }
 
-// Add CORS headers for webhook
-function addCorsHeaders(response: NextResponse) {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  return response;
+// Handle OPTIONS for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200 });
 }
 
-// Handle OPTIONS requests for CORS preflight
-export async function OPTIONS(request: NextRequest) {
-  console.log('🔧 CORS preflight request received');
-  const response = new NextResponse(null, { status: 200 });
-  return addCorsHeaders(response);
-}
-
-// POST - Handle Hireflix webhook notifications
+// POST - Handle webhook
 export async function POST(request: NextRequest) {
-  const timestamp = new Date().toISOString();
-  console.log('\n' + '='.repeat(80));
-  console.log(`🔔 HIREFLIX WEBHOOK RECEIVED AT ${timestamp}`);
-  console.log('='.repeat(80));
-  console.log(`📌 PROCESS ID: ${process.pid}`);
-  console.log(`📌 NODE ENV: ${process.env.NODE_ENV}`);
-  
   try {
-    console.log('📡 Request Details:');
-    console.log(`   Method: ${request.method}`);
-    console.log(`   URL: ${request.url}`);
-    
-    console.log('\n📥 Reading request body...');
+    // Parse request body
     const rawBody = await request.text();
-    console.log(`📄 Raw body length: ${rawBody.length} characters`);
-    console.log(`📄 Raw body preview: ${rawBody.substring(0, 100)}...`);
+    const payload = JSON.parse(rawBody);
     
-    let payload: HireflixWebhookPayload;
-    try {
-      payload = JSON.parse(rawBody);
-      console.log('✅ JSON parsed successfully');
-    } catch (parseError) {
-      console.error('❌ JSON parse error:', parseError);
-      throw new Error('Invalid JSON payload');
-    }
-    
-    console.log('\n🔍 PAYLOAD ANALYSIS:');
-    console.log('📋 Event Type:', payload.event || 'MISSING');
-    
-    // Handle different Hireflix event types
-    if (payload.event === 'interview.status-change') {
-      console.log('\n🔄 Processing interview.status-change event');
+    // Handle interview completion
+    if (payload.event === 'interview.status-change' && payload.data?.status === 'completed') {
+      await updateApplication(payload);
       
-      if (payload.data?.status === 'completed') {
-        console.log('✅ Interview completed via status-change event');
-        
-        // Update application in Firestore
-        await updateApplicationWithInterviewResults(payload);
-        
-        const response = NextResponse.json({
-          success: true,
-          message: 'Interview completion processed',
-          interviewId: payload.data.id,
-          candidateId: payload.data.externalId,
-          timestamp: timestamp
-        });
-        return addCorsHeaders(response);
-      } else {
-        console.log(`ℹ️  Status change to: ${payload.data?.status} (not completed, ignoring)`);
-      }
+      return NextResponse.json({
+        success: true,
+        message: 'Interview completion processed'
+      });
     }
     
-    // Log all other events for monitoring
-    console.log(`ℹ️  Event logged: ${payload.event}`);
-    const response = NextResponse.json({
+    // Handle other events
+    return NextResponse.json({
       success: true,
-      message: `Event ${payload.event} logged successfully`,
-      timestamp: timestamp
+      message: `Event ${payload.event} logged`
     });
-    return addCorsHeaders(response);
     
   } catch (error) {
-    console.error('❌ Webhook: Error processing notification:', error);
-    const response = NextResponse.json(
+    console.error('Webhook error:', error);
+    return NextResponse.json(
       { success: false, error: 'Failed to process webhook' },
       { status: 500 }
     );
-    return addCorsHeaders(response);
-  } finally {
-    console.log('🔚 Webhook processing completed at', new Date().toISOString());
-    console.log('='.repeat(80));
   }
 }
 
 // Update application with interview results
-async function updateApplicationWithInterviewResults(payload: HireflixWebhookPayload) {
+async function updateApplication(payload: HireflixWebhookPayload) {
   try {
-    console.log('\n📝 UPDATING APPLICATION WITH INTERVIEW RESULTS');
-    
-    const candidateEmail = payload.data?.candidate?.email;
-    if (!candidateEmail) {
-      console.warn('⚠️ No candidate email provided');
-      return;
-    }
-    
-    console.log(`🔍 Looking for application with email: ${candidateEmail}`);
+    const email = payload.data?.candidate?.email;
+    if (!email) return;
     
     // Find application by email
     const applicationsRef = collection(db, 'applications');
-    const q = query(applicationsRef, where('email', '==', candidateEmail));
-    console.log(`🔍 Executing Firestore query: ${q}`);
-    
+    const q = query(applicationsRef, where('email', '==', email));
     const querySnapshot = await getDocs(q);
-    console.log(`📊 Query results: ${querySnapshot.size} documents found`);
     
-    if (querySnapshot.empty) {
-      console.warn(`⚠️ No application found with email: ${candidateEmail}`);
-      return;
-    }
+    if (querySnapshot.empty) return;
     
     const applicationDoc = querySnapshot.docs[0];
-    const applicationId = applicationDoc.id;
-    const currentData = applicationDoc.data();
     
-    console.log(`📋 Found application: ${applicationId}`);
-    console.log(`📋 Current application data:`, JSON.stringify({
-      name: currentData.name,
-      email: currentData.email,
-      position: currentData.position,
-      surveyCompleted: currentData.surveyCompleted,
-      interviewStatus: currentData.interviewStatus
-    }, null, 2));
-    
-    // Prepare update data
-    const updateData = {
+    // Update application
+    await updateDoc(doc(db, 'applications', applicationDoc.id), {
       interviewCompleted: true,
       interviewId: payload.data?.id,
       interviewStatus: 'completed',
       interviewVideoUrl: payload.data?.url?.public,
-      interviewShareUrl: payload.data?.url?.short,
       interviewCompletedAt: new Date().toISOString()
-    };
+    });
     
-    console.log(`📤 Updating application with data:`, JSON.stringify(updateData, null, 2));
-    
-    // Update application with interview results
-    await updateDoc(doc(db, 'applications', applicationId), updateData);
-    
-    console.log(`✅ Updated application ${applicationId} with interview results`);
-    
-    // Verify the update
-    const updatedDoc = await getDoc(doc(db, 'applications', applicationId));
-    const updatedData = updatedDoc.data();
-    
-    console.log(`📋 Updated application data:`, JSON.stringify({
-      name: updatedData?.name,
-      email: updatedData?.email,
-      interviewCompleted: updatedData?.interviewCompleted,
-      interviewStatus: updatedData?.interviewStatus,
-      interviewVideoUrl: updatedData?.interviewVideoUrl ? '✓ Present' : '✗ Missing',
-      interviewCompletedAt: updatedData?.interviewCompletedAt
-    }, null, 2));
-    
-    // Also update local storage for the frontend
-    // This is a workaround since we can't directly update localStorage from the server
-    // In a real app, you would use WebSockets or polling to notify the frontend
-    console.log('📱 Updating frontend state (this would be handled by WebSockets in production)');
-    
-    // Signal the frontend to close the iframe
-    // In a real app, this would be done via WebSockets or Server-Sent Events
-    console.log('🎯 Signaling frontend to close iframe and update UI');
-    
+    console.log(`Updated application for ${email}`);
   } catch (error) {
-    console.error('❌ Error updating application with interview results:', error);
-    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    throw error;
+    console.error('Error updating application:', error);
   }
 }
