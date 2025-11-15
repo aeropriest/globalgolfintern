@@ -14,6 +14,7 @@ export default function StatusPage() {
   const [candidateInfo, setCandidateInfo] = useState<any>(null);
   const [applicationStatus, setApplicationStatus] = useState<any>(null);
   const [surveyStatus, setSurveyStatus] = useState<any>(null);
+  const [interviewStatus, setInterviewStatus] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +41,12 @@ export default function StatusPage() {
         const surveyStatusStr = localStorage.getItem(`survey_completed_${candidateId}`);
         if (surveyStatusStr) {
           setSurveyStatus(JSON.parse(surveyStatusStr));
+        }
+        
+        // Load interview status from localStorage
+        const interviewStatusStr = localStorage.getItem(`interview_completed_${candidateId}`);
+        if (interviewStatusStr) {
+          setInterviewStatus(JSON.parse(interviewStatusStr));
         }
       } catch (error) {
         console.error("Failed to load status information:", error);
@@ -189,16 +196,44 @@ export default function StatusPage() {
                 
                 {/* Interview */}
                 <div className="flex">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-gray-400" />
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full ${interviewStatus?.completed ? 'bg-green-100' : 'bg-gray-100'} flex items-center justify-center`}>
+                    {interviewStatus?.completed ? (
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    ) : (
+                      <Clock className="h-6 w-6 text-gray-400" />
+                    )}
                   </div>
                   <div className="ml-4">
-                    <h3 className="text-lg font-medium text-gray-900">Interview</h3>
-                    <p className="text-gray-500">
-                      {surveyStatus?.completed 
-                        ? "Our team will review your application and survey results. We'll contact you for an interview if your profile matches our requirements."
-                        : "This step will be unlocked after completing the personality survey."}
-                    </p>
+                    <h3 className="text-lg font-medium text-gray-900">Video Interview</h3>
+                    {interviewStatus?.completed ? (
+                      <>
+                        <p className="text-gray-500">
+                          You have completed the video interview. Thank you!
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {interviewStatus?.timestamp ? new Date(interviewStatus.timestamp).toLocaleString() : ""}
+                        </p>
+                      </>
+                    ) : surveyStatus?.completed ? (
+                      <>
+                        <p className="text-gray-500">
+                          Please complete the video interview to continue your application process.
+                        </p>
+                        <div className="mt-3">
+                          <GradientButton
+                            onClick={() => router.push(`/interview/${candidateId}`)}
+                            variant="filled"
+                            size="sm"
+                          >
+                            Take Interview Now
+                          </GradientButton>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-500">
+                        This step will be unlocked after completing the personality survey.
+                      </p>
+                    )}
                   </div>
                 </div>
                 

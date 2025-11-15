@@ -24,6 +24,13 @@ interface Application {
     openness: number;
     emotionalStability: number;
   };
+  interviewId?: string;
+  interviewUrl?: string;
+  interviewStatus?: string;
+  interviewCompleted?: boolean;
+  interviewVideoUrl?: string;
+  interviewShareUrl?: string;
+  interviewCompletedAt?: string;
 }
 
 export default function Dashboard() {
@@ -210,6 +217,12 @@ export default function Dashboard() {
                 >
                   Survey Results
                 </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Interview
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -260,6 +273,23 @@ export default function Dashboard() {
                         </button>
                       ) : (
                         <span className="text-gray-400">Not completed</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {application.interviewCompleted ? (
+                        <a
+                          href={application.interviewVideoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 flex items-center"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          <span>View Interview</span>
+                        </a>
+                      ) : application.interviewUrl ? (
+                        <span className="text-yellow-600">In progress</span>
+                      ) : (
+                        <span className="text-gray-400">Not started</span>
                       )}
                     </td>
                   </tr>
