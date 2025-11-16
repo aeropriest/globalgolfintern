@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, FileText, BarChart2, Briefcase, Calendar, MapPin, Mail, Phone, ExternalLink, Loader, AlertTriangle, Database, Cloud, ClipboardCheck } from 'lucide-react';
+import { Users, FileText, BarChart2, Briefcase, Calendar, MapPin, Mail, Phone, ExternalLink, Loader, AlertTriangle, Database, Cloud } from 'lucide-react';
 import Link from 'next/link';
 import { ManatalService, ManatalCandidateExtended } from '../../services/manatal';
 
@@ -20,26 +20,12 @@ interface Application {
   candidateId?: string | number;
 }
 
-export interface SurveyResult {
-  id?: string;
-  candidateId?: string;
-  name?: string;
-  email: string;
-  position?: string;
-  answers: Record<string, Record<number, number>>;
-  traitScores: Record<string, number>;
-  timestamp: string | Date;
-  applicationId?: string | null;
-}
-
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'firestore' | 'manatal'>('firestore');
   const [stats, setStats] = useState({
     totalApplications: 0,
     totalQuizResults: 0,
-    totalSurveyResults: 0,
     recentApplications: [] as Application[],
-    recentSurveyResults: [] as SurveyResult[],
     loading: true,
     error: null as string | null
   });
@@ -61,9 +47,7 @@ export default function Dashboard() {
         setStats({
           totalApplications: data.totalApplications || 0,
           totalQuizResults: data.totalQuizResults || 0,
-          totalSurveyResults: data.totalSurveyResults || 0,
           recentApplications: data.recentApplications || [],
-          recentSurveyResults: data.recentSurveyResults || [],
           loading: false,
           error: null
         });
@@ -146,13 +130,6 @@ export default function Dashboard() {
       href: '/dashboard/quiz-results'
     },
     {
-      name: 'Survey Completions',
-      value: stats.totalSurveyResults,
-      icon: ClipboardCheck,
-      color: 'bg-teal-500',
-      href: '/dashboard/survey-results'
-    },
-    {
       name: 'Open Positions',
       value: '5',
       icon: Briefcase,
@@ -222,7 +199,7 @@ export default function Dashboard() {
           </div>
         ) : (
         <>
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {cards.map((card) => (
               <Link
                 key={card.name}
@@ -348,99 +325,6 @@ export default function Dashboard() {
               ) : (
                 <div className="px-4 py-6 text-center text-sm text-gray-500">
                   No applications yet
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Survey Results */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Recent Survey Results</h2>
-              <Link 
-                href="/dashboard/survey-results" 
-                className="text-sm font-medium text-pink-600 hover:text-pink-500"
-              >
-                View all
-              </Link>
-            </div>
-            
-            <div className="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
-              {stats.recentSurveyResults.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Candidate
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Position
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Traits
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                        <th scope="col" className="relative px-6 py-3">
-                          <span className="sr-only">Actions</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {stats.recentSurveyResults.map((survey) => (
-                        <tr key={survey.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {survey.name || 'Anonymous'}
-                                </div>
-                                <div className="text-sm text-gray-500 flex items-center">
-                                  <Mail className="h-3 w-3 mr-1" />
-                                  {survey.email}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{survey.position || 'Not specified'}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">
-                              {Object.entries(survey.traitScores || {}).slice(0, 3).map(([trait, score], i) => (
-                                <div key={i} className="mb-1">
-                                  <span className="font-medium">{trait}:</span> {score}
-                                </div>
-                              ))}
-                              {Object.keys(survey.traitScores || {}).length > 3 && (
-                                <div className="text-xs text-gray-500">+ {Object.keys(survey.traitScores).length - 3} more traits</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex items-center">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {formatDate(survey.timestamp)}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Link 
-                              href={`/dashboard/survey-results/${survey.id}`}
-                              className="text-pink-600 hover:text-pink-900 flex items-center justify-end"
-                            >
-                              View <ExternalLink className="ml-1 h-3 w-3" />
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="px-4 py-6 text-center text-sm text-gray-500">
-                  No survey results yet
                 </div>
               )}
             </div>
