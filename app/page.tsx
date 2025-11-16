@@ -7,15 +7,39 @@ import Section from '../components/Section';
 import { CheckCircle, Search, Users, BarChart, Globe, Briefcase, TrendingUp, BookOpen, Star, ChevronsRight, FileText, Video, UserCheck, MessageSquare, CheckSquare } from 'lucide-react';
 import { partnershipData, valuePoints, timeline, faqData, screeningSteps, educationPoints } from '../constants';
 
-const ValuePoint: React.FC<{ icon: React.ReactNode; title: string; text: string }> = ({ icon, title, text }) => (
-  <div className="flex items-start space-x-4">
-    <div className="text-pink-500 mt-1">{icon}</div>
-    <div>
-      <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-      <p className="text-gray-600">{text}</p>
+const ValuePoint: React.FC<{ iconName: string; title: string; text: string }> = ({ iconName, title, text }) => {
+  // Render the appropriate icon based on iconName
+  const renderIcon = () => {
+    switch (iconName) {
+      case 'Globe':
+        return <Globe className="h-6 w-6" />;
+      case 'Users':
+        return <Users className="h-6 w-6" />;
+      case 'Briefcase':
+        return <Briefcase className="h-6 w-6" />;
+      case 'TrendingUp':
+        return <TrendingUp className="h-6 w-6" />;
+      case 'BookOpen':
+        return <BookOpen className="h-6 w-6" />;
+      case 'Star':
+        return <Star className="h-6 w-6" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex items-start space-x-4">
+      <div className="text-pink-500 mt-1">
+        {renderIcon()}
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <p className="text-gray-600">{text}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function HomePage() {
   return (
@@ -157,7 +181,22 @@ export default function HomePage() {
                     <div className="text-7xl font-bold text-gray-200">{index + 1}</div>
                     <div className="flex-1 bg-white p-6 rounded-lg shadow-md border border-gray-200">
                         <h3 className="text-xl font-semibold text-pink-600 mb-2 flex items-center">
-                            {step.icon}
+                            {(() => {
+                              switch (step.iconName) {
+                                case 'FileText':
+                                  return <FileText className="h-5 w-5 text-pink-500" />;
+                                case 'CheckSquare':
+                                  return <CheckSquare className="h-5 w-5 text-pink-500" />;
+                                case 'Users':
+                                  return <Users className="h-5 w-5 text-pink-500" />;
+                                case 'Video':
+                                  return <Video className="h-5 w-5 text-pink-500" />;
+                                case 'UserCheck':
+                                  return <UserCheck className="h-5 w-5 text-pink-500" />;
+                                default:
+                                  return null;
+                              }
+                            })()}
                             <span className="ml-3">{step.title}</span>
                         </h3>
                         <p className="text-gray-600">{step.description}</p>
@@ -172,7 +211,20 @@ export default function HomePage() {
             {educationPoints.map((point, index) => (
                <div key={index} className="bg-white p-6 rounded-lg flex items-start space-x-4 shadow-md border border-gray-200">
                   <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-2 rounded-full mt-1">
-                      {point.icon}
+                      {(() => {
+                        switch (point.iconName) {
+                          case 'Star':
+                            return <Star className="h-5 w-5 text-white" />;
+                          case 'Users':
+                            return <Users className="h-5 w-5 text-white" />;
+                          case 'Globe':
+                            return <Globe className="h-5 w-5 text-white" />;
+                          case 'BookOpen':
+                            return <BookOpen className="h-5 w-5 text-white" />;
+                          default:
+                            return null;
+                        }
+                      })()}
                   </div>
                   <div>
                       <h3 className="text-xl font-bold text-purple-700">{point.title}</h3>

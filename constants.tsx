@@ -4,32 +4,32 @@ import { CheckCircle, Search, Users, BarChart, Globe, Briefcase, TrendingUp, Boo
 // Value Points
 export const valuePoints = [
   {
-    icon: <Globe className="h-6 w-6" />,
+    iconName: 'Globe',
     title: "Global Network",
     text: "Access to a worldwide network of prestigious clubs and resorts."
   },
   {
-    icon: <Users className="h-6 w-6" />,
+    iconName: 'Users',
     title: "Vetted Talent",
     text: "Carefully screened candidates with passion for hospitality and service."
   },
   {
-    icon: <Briefcase className="h-6 w-6" />,
+    iconName: 'Briefcase',
     title: "Seasonal Flexibility",
     text: "Staff rotation aligned with your high and low seasons."
   },
   {
-    icon: <TrendingUp className="h-6 w-6" />,
+    iconName: 'TrendingUp',
     title: "Leadership Development",
     text: "Structured training to build future industry leaders."
   },
   {
-    icon: <BookOpen className="h-6 w-6" />,
+    iconName: 'BookOpen',
     title: "Continuous Education",
     text: "Ongoing professional development and industry certifications."
   },
   {
-    icon: <Star className="h-6 w-6" />,
+    iconName: 'Star',
     title: "Service Excellence",
     text: "Improved member experience through consistent, quality service."
   }
@@ -121,27 +121,32 @@ export const faqData = [
 // Screening Steps
 export const screeningSteps = [
   {
-    icon: <FileText className="h-5 w-5 text-pink-500" />,
+    iconName: 'FileText',
+    iconColor: 'text-pink-500',
     title: "Application Review",
     description: "Comprehensive assessment of education, experience, and career goals to identify promising candidates."
   },
   {
-    icon: <CheckSquare className="h-5 w-5 text-pink-500" />,
+    iconName: 'CheckSquare',
+    iconColor: 'text-pink-500',
     title: "Personality Assessment",
     description: "Scientific evaluation of service orientation, work ethic, and cultural adaptability."
   },
   {
-    icon: <Users className="h-5 w-5 text-pink-500" />,
+    iconName: 'Users',
+    iconColor: 'text-pink-500',
     title: "Skills Evaluation",
     description: "Practical assessment of relevant hospitality and service skills through scenario-based testing."
   },
   {
-    icon: <Video className="h-5 w-5 text-pink-500" />,
+    iconName: 'Video',
+    iconColor: 'text-pink-500',
     title: "Video Interview",
     description: "In-depth conversations to evaluate communication skills, cultural fit, and professional goals."
   },
   {
-    icon: <UserCheck className="h-5 w-5 text-pink-500" />,
+    iconName: 'UserCheck',
+    iconColor: 'text-pink-500',
     title: "Club Matching",
     description: "Careful alignment of candidate strengths and aspirations with club culture and requirements."
   }
@@ -150,22 +155,26 @@ export const screeningSteps = [
 // Education Points
 export const educationPoints = [
   {
-    icon: <Star className="h-5 w-5 text-white" />,
+    iconName: 'Star',
+    iconColor: 'text-white',
     title: "Service Excellence",
     description: "59club certified training in world-class hospitality and member service standards."
   },
   {
-    icon: <Users className="h-5 w-5 text-white" />,
+    iconName: 'Users',
+    iconColor: 'text-white',
     title: "Leadership Development",
     description: "Structured mentorship and management training to build essential leadership skills."
   },
   {
-    icon: <Globe className="h-5 w-5 text-white" />,
+    iconName: 'Globe',
+    iconColor: 'text-white',
     title: "Global Perspective",
     description: "Cross-cultural experience and international best practices in club operations."
   },
   {
-    icon: <BookOpen className="h-5 w-5 text-white" />,
+    iconName: 'BookOpen',
+    iconColor: 'text-white',
     title: "Industry Certifications",
     description: "Access to recognized professional qualifications from leading industry bodies."
   }
