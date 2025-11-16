@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CheckCircle, Loader, AlertTriangle } from 'lucide-react';
-import GradientButton from '../../components/GradientButton';
-
+import GradientButton from '../../../components/GradientButton';
 
 // Define the question categories and questions - 6 questions per category (30 total)
 const surveyQuestions = {
@@ -50,7 +49,6 @@ const surveyQuestions = {
   ]
 };
 
-
 // Define the trait categories for display
 const traitCategories = {
   extraversion: "Extraversion (sociability and energy in groups)",
@@ -60,7 +58,6 @@ const traitCategories = {
   emotionalStability: "Emotional Stability (resilience under stress)"
 };
 
-
 export default function SurveyPage() {
   const params = useParams();
   const router = useRouter();
@@ -69,6 +66,10 @@ export default function SurveyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  
+  // Log when the survey page is loaded
+  console.log(`🔍 Survey page loaded for candidate ID: ${candidateId}`);
+  console.log(`📝 URL parameters:`, params);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   
   // Initialize answers state with empty values
@@ -80,60 +81,39 @@ export default function SurveyPage() {
     emotionalStability: {}
   });
 
-
   // Load candidate information from localStorage
   useEffect(() => {
+    console.log(`🔍 Survey page useEffect triggered for candidate ID: ${candidateId}`);
+    
     const loadCandidateInfo = () => {
       if (!candidateId) {
+        console.error(`❌ No candidate ID provided`);
         setIsLoading(false);
         return;
       }
 
-
       try {
+        console.log(`📝 Attempting to load candidate info from localStorage for ID: ${candidateId}`);
         // Load candidate info from localStorage
         const candidateInfoStr = localStorage.getItem(`candidate_info_${candidateId}`);
         if (candidateInfoStr) {
           const info = JSON.parse(candidateInfoStr);
+          console.log(`✅ Successfully loaded candidate info:`, info);
           setCandidateInfo(info);
+        } else {
+          console.warn(`⚠️ No candidate info found in localStorage for ID: ${candidateId}`);
         }
         setIsLoading(false);
       } catch (error) {
-        console.error("Failed to load candidate information:", error);
+        console.error(`❌ Failed to load candidate information:`, error);
         setIsLoading(false);
       }
     };
 
-
     loadCandidateInfo();
   }, [candidateId]);
 
-
-  // For testing purposes, pre-fill the survey with consistent answers
-  useEffect(() => {
-    if (!isLoading) {
-      const preFilledAnswers: Record<string, Record<number, number>> = {
-        extraversion: {},
-        agreeableness: {},
-        conscientiousness: {},
-        openness: {},
-        emotionalStability: {}
-      };
-      
-      // Pre-fill with consistent answers for testing
-      Object.keys(surveyQuestions).forEach(category => {
-        const questions = surveyQuestions[category as keyof typeof surveyQuestions];
-        questions.forEach((_, index) => {
-          // Use a consistent pattern: 4, 5, 3, 4, 5, 3
-          const patterns = [4, 5, 3, 4, 5, 3];
-          preFilledAnswers[category][index] = patterns[index % patterns.length];
-        });
-      });
-      
-      setAnswers(preFilledAnswers);
-    }
-  }, [isLoading]);
-
+  // Initialize empty answers (removed prefilled answers for production)
 
   // Handle answer change
   const handleAnswerChange = (category: string, questionIndex: number, value: number) => {
@@ -146,12 +126,10 @@ export default function SurveyPage() {
     }));
   };
 
-
   // Check if all questions are answered
   const isFormComplete = () => {
     let totalQuestions = 0;
     let answeredQuestions = 0;
-
 
     Object.keys(surveyQuestions).forEach(category => {
       const questions = surveyQuestions[category as keyof typeof surveyQuestions];
@@ -161,10 +139,8 @@ export default function SurveyPage() {
       answeredQuestions += Object.keys(categoryAnswers).length;
     });
 
-
     return totalQuestions === answeredQuestions;
   };
-
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,10 +151,8 @@ export default function SurveyPage() {
       return;
     }
 
-
     setIsSubmitting(true);
     setSubmitError('');
-
 
     try {
       // Calculate average scores for each trait
@@ -195,7 +169,6 @@ export default function SurveyPage() {
         traitScores[category] = sum / questions.length;
       });
 
-
       // Prepare data for submission
       const submissionData = {
         candidateId,
@@ -205,7 +178,6 @@ export default function SurveyPage() {
         answers,
         traitScores
       };
-
 
       // Submit survey data to API
       try {
@@ -229,10 +201,6 @@ export default function SurveyPage() {
         throw new Error('Failed to submit survey data');
       }
 
-
-      // Show success message
-      setSubmitSuccess(true);
-      
       // Save survey completion status to localStorage
       localStorage.setItem(`survey_completed_${candidateId}`, JSON.stringify({
         completed: true,
@@ -240,10 +208,15 @@ export default function SurveyPage() {
         traitScores
       }));
       
-      // Redirect after a delay
-      setTimeout(() => {
-        router.push(`/status/${candidateId}`);
-      }, 5000);
+      // Update the application status to Survey Completed
+      localStorage.setItem(`application_status_${candidateId}`, JSON.stringify({ 
+        status: 'Survey Completed', 
+        timestamp: new Date().toISOString() 
+      }));
+      
+      // Redirect to the interview page
+      console.log(`🔄 Redirecting to interview page: /interview/${candidateId}`);
+      router.push(`/interview/${candidateId}`);
       
     } catch (error) {
       console.error('Survey submission error:', error);
@@ -252,7 +225,6 @@ export default function SurveyPage() {
       setIsSubmitting(false);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -266,32 +238,8 @@ export default function SurveyPage() {
     );
   }
 
-
-  if (submitSuccess) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 bg-gray-50">
-        <div className="bg-white p-8 md:p-12 rounded-2xl border border-gray-200 shadow-xl w-full max-w-3xl text-center">
-          <CheckCircle className="h-20 w-20 text-green-500 mx-auto mb-6" />
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-            Thank You for Completing the Survey!
-          </h1>
-          <p className="text-gray-600 text-lg mb-8">
-            Your responses have been recorded successfully. We appreciate your participation!
-          </p>
-          <div className="mt-8">
-            <GradientButton
-              onClick={() => router.push(`/status/${candidateId}`)}
-              variant="filled"
-              size="lg"
-            >
-              Return to Application Status
-            </GradientButton>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // We don't need a success message anymore since we redirect immediately
+  // Removed the success message block
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 bg-gray-50">
@@ -300,7 +248,6 @@ export default function SurveyPage() {
         <p className="text-gray-600 text-center mb-8">
           Please answer all 30 questions honestly to help us understand your personality traits.
         </p>
-
 
         {candidateInfo && (
           <div className="bg-gray-50 p-4 rounded-lg mb-8">
@@ -314,7 +261,6 @@ export default function SurveyPage() {
             </div>
           </div>
         )}
-
 
         <form onSubmit={handleSubmit} className="space-y-12">
           {Object.entries(surveyQuestions).map(([category, questions], categoryIndex) => (
@@ -357,7 +303,6 @@ export default function SurveyPage() {
             </div>
           ))}
 
-
           {submitError && (
             <div className="bg-red-50 border-l-4 border-red-400 p-4" role="alert">
               <div className="flex">
@@ -369,7 +314,6 @@ export default function SurveyPage() {
               </div>
             </div>
           )}
-
 
           <div className="flex justify-center pt-6">
             <GradientButton

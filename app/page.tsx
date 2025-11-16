@@ -1,169 +1,207 @@
-import Image from "next/image";
-import Link from "next/link";
-import Header from "./components/Header";
-import Hero from "./components/Hero";
+'use client';
 
-export default function Home() {
+import React from 'react';
+import Header from '../components/Header';
+import Hero from '../components/Hero';
+import Section from '../components/Section';
+import { CheckCircle, Search, Users, BarChart, Globe, Briefcase, TrendingUp, BookOpen, Star, ChevronsRight, FileText, Video, UserCheck, MessageSquare, CheckSquare } from 'lucide-react';
+import { partnershipData, valuePoints, timeline, faqData, screeningSteps, educationPoints } from '../constants';
+
+const ValuePoint: React.FC<{ icon: React.ReactNode; title: string; text: string }> = ({ icon, title, text }) => (
+  <div className="flex items-start space-x-4">
+    <div className="text-pink-500 mt-1">{icon}</div>
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+      <p className="text-gray-600">{text}</p>
+    </div>
+  </div>
+);
+
+export default function HomePage() {
   return (
     <>
       <Header />
       <Hero />
-    </>
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <h1 className="text-3xl font-bold text-gray-800">
-                Global Golf Intern
-              </h1>
+      {/* <Section id="goals" title="The Club & Hospitality Industry faces two pressing challenges...">
+        <div className="space-y-12 max-w-4xl mx-auto">
+          <div className="bg-white p-8 rounded-2xl shadow-lg relative border border-gray-200">
+            <div className="absolute -top-5 -left-5 bg-gradient-to-br from-pink-500 to-purple-600 p-3 rounded-full shadow-lg">
+              <Search className="h-8 w-8 text-white" />
             </div>
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/apply" 
-                className="bg-pink-600 hover:bg-pink-700 text-white py-2 px-6 rounded-lg transition-colors inline-flex items-center"
-              >
-                Apply Now
-              </Link>
-              <Link 
-                href="/dashboard" 
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-6 rounded-lg transition-colors inline-flex items-center"
-              >
-                Admin Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-900 to-purple-900 text-white py-24">
-        <div className="absolute inset-0 bg-black opacity-50"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">Launch Your Career in Golf Management</h1>
-            <p className="text-xl md:text-2xl mb-8">Join our prestigious internship program at world-class golf clubs</p>
-            <Link 
-              href="/apply" 
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105"
-            >
-              Apply for Summer 2026
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-16">
-        {/* Features Section */}
-        <div className="mb-20">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">Why Choose Our Internship Program?</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-14 w-14 bg-pink-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-pink-600 text-2xl">✓</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Professional Development</h3>
-              <p className="text-gray-600">
-                Receive mentorship from industry professionals and build your network with leaders in the golf industry.
-              </p>
-            </div>
-            
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-14 w-14 bg-purple-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-purple-600 text-2xl">✓</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Global Experience</h3>
-              <p className="text-gray-600">
-                Gain international experience at prestigious golf clubs across multiple countries and continents.
-              </p>
-            </div>
-            
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="h-14 w-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                <span className="text-blue-600 text-2xl">✓</span>
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Hands-on Learning</h3>
-              <p className="text-gray-600">
-                Get real-world experience in golf operations, marketing, events, and hospitality management.
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* About Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">About Our Program</h2>
-            <p className="text-lg text-gray-600 mb-6">
-              The Global Golf Intern program connects talented individuals with prestigious golf clubs worldwide. 
-              Our comprehensive internship offers hands-on experience in all aspects of golf club management.
+            <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 mb-4 pl-10">Finding passionate seasonal staff</h3>
+            <p className="text-gray-700 text-lg">
+              Each year, clubs struggle to source motivated and capable team members to support peak season operations. Poor recruitment leads to poor customer service.
             </p>
-            <p className="text-lg text-gray-600 mb-6">
-              Interns gain valuable skills in customer service, event planning, marketing, and operations while 
-              working alongside industry professionals at some of the world's most renowned golf destinations.
+          </div>
+          <div className="bg-white p-8 rounded-2xl shadow-lg relative border border-gray-200">
+            <div className="absolute -top-5 -left-5 bg-gradient-to-br from-pink-500 to-purple-600 p-3 rounded-full shadow-lg">
+              <Users className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 mb-4 pl-10">Creating pathways for future leaders</h3>
+            <p className="text-gray-700 text-lg">
+              Aspiring managers and professionals often lack structured opportunities for international experience, leadership development, and mentorship.
             </p>
-            <div className="flex items-center space-x-4">
-              <div className="flex -space-x-4">
-                <div className="h-12 w-12 rounded-full bg-gray-300 border-2 border-white"></div>
-                <div className="h-12 w-12 rounded-full bg-gray-300 border-2 border-white"></div>
-                <div className="h-12 w-12 rounded-full bg-gray-300 border-2 border-white"></div>
-              </div>
-              <p className="text-gray-600">Join our network of 25+ prestigious golf clubs</p>
-            </div>
           </div>
-          <div className="bg-gray-200 h-96 rounded-xl flex items-center justify-center">
-            <p className="text-gray-500 text-lg">Golf Course Image Placeholder</p>
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-800 p-8 rounded-2xl shadow-2xl text-center">
+            <p className="text-lg text-white font-large">
+              The Global Golf Internship has been introduced to solve both problems at once – by connecting motivated graduates with leading clubs worldwide, and giving clubs a reliable talent pipeline.
+            </p>
           </div>
         </div>
-        
-        {/* CTA Section */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-12 text-white text-center">
-          <h2 className="text-3xl font-bold mb-6">Ready to Start Your Journey?</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Applications for our summer 2026 internship program are now open! Limited positions available at our partner clubs.
-          </p>
-          <Link 
-            href="/apply" 
-            className="bg-white text-pink-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-lg text-lg inline-block transition-colors"
-          >
-            Apply Now
-          </Link>
+      </Section> */}
+{/* 
+      <Section id="value" title="Quality Talent, Better Service, Higher Revenue">
+        <p className="max-w-4xl mx-auto text-center text-gray-600 text-xl mb-16">
+          The Initiative supports clubs in recruiting proactive passionate seasonal staff and provides a structured, international pathway for aspiring managers and professionals.
+        </p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {valuePoints.map((point, index) => (
+            <ValuePoint key={index} {...point} />
+          ))}
         </div>
-      </div>
-      
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-lg font-bold mb-4">Global Golf Intern</h3>
-              <p className="text-gray-400">Connecting talented individuals with prestigious golf clubs worldwide.</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/" className="hover:text-white transition-colors">Home</Link></li>
-                <li><Link href="/apply" className="hover:text-white transition-colors">Apply</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white transition-colors">Admin Dashboard</Link></li>
+      </Section> */}
+{/* 
+      <Section id="partners" title="Partnering for Success">
+        <p className="max-w-4xl mx-auto text-center text-gray-600 text-xl mb-16">
+          Collaboration is key, allowing us to tap into the finest expertise & experience in the industry.
+        </p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {partnershipData.map((partner) => (
+            <div key={partner.name} className="bg-white p-8 rounded-2xl border border-gray-200 hover:border-pink-400 transition-all duration-300 transform hover:-translate-y-2 shadow-lg">
+              <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 mb-4">{partner.name}</h3>
+              <ul className="space-y-3">
+                {partner.points.map((point, i) => (
+                  <li key={i} className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-1 flex-shrink-0" />
+                    <span className="text-gray-600">{point}</span>
+                  </li>
+                ))}
               </ul>
             </div>
-            <div>
-              <h3 className="text-lg font-bold mb-4">Contact Us</h3>
-              <p className="text-gray-400">Email: info@globalgolfintern.com</p>
-              <p className="text-gray-400">Phone: +1 (555) 123-4567</p>
-            </div>
-          </div>
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>© {new Date().getFullYear()} Global Golf Intern. All rights reserved.</p>
-          </div>
+          ))}
         </div>
-      </footer>
-    </div>
+      </Section>
+      
+      <Section id="model" title="A Smarter Way to Build Your Team">
+         <p className="max-w-4xl mx-auto text-center text-gray-600 text-xl mb-16">
+           Candidates are placed at clubs during high season. During low seasons, they rotate to respected international clubs with opposing seasonal cycles.
+        </p>
+        <div className="overflow-x-auto bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="p-4 bg-gray-100 rounded-tl-lg"></th>
+                <th className="p-4 bg-gray-100 text-purple-700 font-semibold">Year 1</th>
+                <th className="p-4 bg-gray-100 text-purple-700 font-semibold">Year 2</th>
+                <th className="p-4 bg-gray-100 text-purple-700 font-semibold rounded-tr-lg">Year 3</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr>
+                <td className="p-4 font-semibold text-purple-800">Home Club (High Season)</td>
+                <td className="p-4 text-gray-700">Home Club</td>
+                <td className="p-4 text-gray-700">Home Club</td>
+                <td className="p-4 text-gray-700">Home Club</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-semibold text-purple-800">Away Club (Low Season)</td>
+                <td className="p-4 text-gray-700">Away Club Region 1</td>
+                <td className="p-4 text-gray-700">Away Club Region 2</td>
+                <td className="p-4 text-gray-700">Away Club Region 3</td>
+              </tr>
+               <tr>
+                <td className="p-4 font-semibold text-purple-800">Included Education</td>
+                <td className="p-4 text-gray-700">59club Accreditations & Leadership Training</td>
+                <td className="p-4 text-gray-700">59club Accreditations & Leadership Training</td>
+                <td className="p-4 text-gray-700">59club Accreditations & Leadership Training</td>
+              </tr>
+              <tr>
+                <td className="p-4 font-semibold text-purple-800">Supplemental Education</td>
+                <td className="p-4 text-gray-700">PGA / CMAE / Agronomy</td>
+                <td className="p-4 text-gray-700">PGA / CMAE / Agronomy</td>
+                <td className="p-4 text-gray-700">PGA / CMAE / Agronomy</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Section>
+      
+       <Section id="timeline" title="Professional Onboarding Timeline">
+          <div className="max-w-3xl mx-auto">
+              <div className="relative">
+                  <div className="absolute left-1/2 -ml-0.5 w-1 bg-gray-200 h-full"></div>
+                  {timeline.map((item, index) => (
+                      <div key={index} className="mb-12 flex justify-between items-center w-full">
+                          <div className={`w-5/12 ${index % 2 === 0 ? 'order-1' : 'order-3 text-right'}`}>
+                              <p className="text-xl font-bold text-pink-500">{item.date}</p>
+                          </div>
+                          <div className="z-10 order-2 w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-md">
+                             <ChevronsRight className="text-white" />
+                          </div>
+                          <div className={`w-5/12 px-4 py-3 bg-white rounded-lg shadow-md border border-gray-200 ${index % 2 === 0 ? 'order-3' : 'order-1'}`}>
+                              <p className="text-md text-gray-600">{item.description}</p>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      </Section>
+
+      <Section id="screening" title="Finding the Right Fit for You">
+        <p className="max-w-4xl mx-auto text-center text-gray-600 text-xl mb-16">
+          Our five-step selection process finds the best candidates for you, your club, and the industry.
+        </p>
+        <div className="max-w-3xl mx-auto space-y-8">
+            {screeningSteps.map((step, index) => (
+                <div key={index} className="flex items-center space-x-6">
+                    <div className="text-7xl font-bold text-gray-200">{index + 1}</div>
+                    <div className="flex-1 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h3 className="text-xl font-semibold text-pink-600 mb-2 flex items-center">
+                            {step.icon}
+                            <span className="ml-3">{step.title}</span>
+                        </h3>
+                        <p className="text-gray-600">{step.description}</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+      </Section>
+
+       <Section id="education" title="Expert Education">
+         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+            {educationPoints.map((point, index) => (
+               <div key={index} className="bg-white p-6 rounded-lg flex items-start space-x-4 shadow-md border border-gray-200">
+                  <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-2 rounded-full mt-1">
+                      {point.icon}
+                  </div>
+                  <div>
+                      <h3 className="text-xl font-bold text-purple-700">{point.title}</h3>
+                      <p className="text-gray-600 mt-2">{point.description}</p>
+                  </div>
+              </div>
+            ))}
+        </div>
+       </Section>
+
+      <Section id="faq" title="Frequently Asked Questions">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {faqData.map((faq, index) => (
+            <div key={index} className="bg-white rounded-xl shadow-md border border-gray-200">
+              <details className="group">
+                <summary className="p-6 cursor-pointer flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-purple-800">{faq.question}</h3>
+                  <span className="transform transition-transform duration-300 group-open:rotate-90 text-purple-600">
+                    <ChevronsRight />
+                  </span>
+                </summary>
+                <div className="px-6 pb-6 text-gray-700">
+                  <p>{faq.answer}</p>
+                </div>
+              </details>
+            </div>
+          ))}
+        </div>
+      </Section> */}
+    </>
   );
 }

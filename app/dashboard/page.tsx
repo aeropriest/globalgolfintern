@@ -1,385 +1,562 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FirebaseService } from '../services/firebase';
-import { Loader, Search, ChevronDown, ChevronUp, ExternalLink, Download, BarChart } from 'lucide-react';
+import { Users, FileText, BarChart2, Briefcase, Calendar, MapPin, Mail, Phone, ExternalLink, Loader, AlertTriangle, Database, Cloud, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
+import { ManatalService, ManatalCandidateExtended } from '../../services/manatal';
 
 interface Application {
-  id: string;
+  id?: string;
   name: string;
   email: string;
-  phone: string;
-  location: string;
-  position: string;
-  resumeUrl: string;
-  message?: string;
-  status: string;
-  timestamp: any;
-  surveyCompleted?: boolean;
-  traitScores?: {
-    extraversion: number;
-    agreeableness: number;
-    conscientiousness: number;
-    openness: number;
-    emotionalStability: number;
-  };
+  phone?: string;
+  location?: string;
+  position?: string;
+  resumeUrl?: string;
+  passportCountry?: string;
+  golfHandicap?: string;
+  status?: string;
+  timestamp: string | Date;
+  candidateId?: string | number;
+}
+
+export interface SurveyResult {
+  id?: string;
+  candidateId?: string;
+  name?: string;
+  email: string;
+  position?: string;
+  answers: Record<string, Record<number, number>>;
+  traitScores: Record<string, number>;
+  timestamp: string | Date;
+  applicationId?: string | null;
 }
 
 export default function Dashboard() {
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<keyof Application>('timestamp');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'firestore' | 'manatal'>('firestore');
+  const [stats, setStats] = useState({
+    totalApplications: 0,
+    totalQuizResults: 0,
+    totalSurveyResults: 0,
+    recentApplications: [] as Application[],
+    recentSurveyResults: [] as SurveyResult[],
+    loading: true,
+    error: null as string | null
+  });
+  const [manatalCandidates, setManatalCandidates] = useState<ManatalCandidateExtended[]>([]);
+  const [loadingManatal, setLoadingManatal] = useState(false);
+  const [manatalError, setManatalError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchApplications = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const data = await FirebaseService.getApplications();
-        setApplications(data as Application[]);
+        // Fetch dashboard statistics
+        const response = await fetch('/api/dashboard/stats');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+        
+        const data = await response.json();
+        setStats({
+          totalApplications: data.totalApplications || 0,
+          totalQuizResults: data.totalQuizResults || 0,
+          totalSurveyResults: data.totalSurveyResults || 0,
+          recentApplications: data.recentApplications || [],
+          recentSurveyResults: data.recentSurveyResults || [],
+          loading: false,
+          error: null
+        });
       } catch (error) {
-        console.error('Error fetching applications:', error);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching dashboard data:', error);
+        setStats(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error ? error.message : 'An error occurred'
+        }));
       }
     };
 
-    fetchApplications();
+    fetchDashboardData();
   }, []);
 
-  const handleSort = (field: keyof Application) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
+  useEffect(() => {
+    const fetchManatalCandidates = async () => {
+      if (activeTab === 'manatal') {
+        setLoadingManatal(true);
+        setManatalError(null);
+        try {
+          const candidates = await ManatalService.getAllCandidates();
+          setManatalCandidates(candidates);
+        } catch (error) {
+          console.error('Error fetching Manatal candidates:', error);
+          setManatalError(error instanceof Error ? error.message : 'Failed to fetch Manatal candidates');
+        } finally {
+          setLoadingManatal(false);
+        }
+      }
+    };
 
-  const filteredApplications = applications.filter(app => 
-    app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    fetchManatalCandidates();
+  }, [activeTab]);
 
-  const sortedApplications = [...filteredApplications].sort((a, b) => {
-    if (sortField === 'timestamp') {
-      const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp?.seconds ? a.timestamp.seconds * 1000 : Date.now());
-      const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp?.seconds ? b.timestamp.seconds * 1000 : Date.now());
-      
-      return sortDirection === 'asc' 
-        ? dateA.getTime() - dateB.getTime()
-        : dateB.getTime() - dateA.getTime();
-    }
-    
-    const valueA = a[sortField] || '';
-    const valueB = b[sortField] || '';
-    
-    if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
-    if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
-    
-    const date = timestamp instanceof Date 
-      ? timestamp 
-      : new Date(timestamp?.seconds ? timestamp.seconds * 1000 : Date.now());
-    
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     });
   };
 
-  const SortIcon = ({ field }: { field: keyof Application }) => {
-    if (field !== sortField) return null;
-    return sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
+  const getStatusBadgeColor = (status: string | undefined) => {
+    switch (status) {
+      case 'Application Submitted':
+        return 'bg-green-100 text-green-800';
+      case 'Interview Scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'Interview Completed':
+        return 'bg-purple-100 text-purple-800';
+      case 'Shortlisted':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Offer Extended':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Offer Accepted':
+        return 'bg-teal-100 text-teal-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader className="h-8 w-8 animate-spin text-pink-500 mx-auto mb-4" />
-          <p className="text-gray-600">Loading applications...</p>
-        </div>
-      </div>
-    );
-  }
+  const cards = [
+    {
+      name: 'Total Applications',
+      value: stats.totalApplications,
+      icon: Users,
+      color: 'bg-pink-500',
+      href: '/dashboard/applications'
+    },
+    {
+      name: 'Quiz Completions',
+      value: stats.totalQuizResults,
+      icon: FileText,
+      color: 'bg-purple-500',
+      href: '/dashboard/quiz-results'
+    },
+    {
+      name: 'Survey Completions',
+      value: stats.totalSurveyResults,
+      icon: ClipboardCheck,
+      color: 'bg-teal-500',
+      href: '/dashboard/survey-results'
+    },
+    {
+      name: 'Open Positions',
+      value: '5',
+      icon: Briefcase,
+      color: 'bg-blue-500',
+      href: '#'
+    },
+    {
+      name: 'Analytics',
+      value: 'View',
+      icon: BarChart2,
+      color: 'bg-green-500',
+      href: '/dashboard/analytics'
+    }
+  ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Internship Applications Dashboard</h1>
-        <Link href="/" className="bg-pink-600 hover:bg-pink-700 text-white py-2 px-4 rounded-lg transition-colors">
-          Back to Home
-        </Link>
+    <div>
+      <div className="pb-5 border-b border-gray-200">
+        <h1 className="text-3xl font-bold leading-tight text-gray-900">Dashboard</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          Overview of applications and quiz results
+        </p>
       </div>
       
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Search applications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-              />
-            </div>
-            <div className="text-gray-600">
-              {filteredApplications.length} {filteredApplications.length === 1 ? 'application' : 'applications'} found
-            </div>
-          </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Name</span>
-                    <SortIcon field="name" />
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('email')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Email</span>
-                    <SortIcon field="email" />
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('position')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Position</span>
-                    <SortIcon field="position" />
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('location')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Location</span>
-                    <SortIcon field="location" />
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('timestamp')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Date Applied</span>
-                    <SortIcon field="timestamp" />
-                  </div>
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Resume
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Survey Results
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sortedApplications.length > 0 ? (
-                sortedApplications.map((application) => (
-                  <tr key={application.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{application.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{application.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{application.position}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{application.location}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{formatDate(application.timestamp)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {application.resumeUrl ? (
-                        <a 
-                          href={application.resumeUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-pink-600 hover:text-pink-800 flex items-center"
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          <span>Resume</span>
-                        </a>
-                      ) : (
-                        <span className="text-gray-400">No resume</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {application.surveyCompleted && application.traitScores ? (
-                        <button
-                          onClick={() => {
-                            setSelectedApplication(application);
-                            setShowModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 flex items-center"
-                        >
-                          <BarChart className="h-4 w-4 mr-1" />
-                          <span>View Results</span>
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">Not completed</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                    No applications found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Tabs */}
+      <div className="mt-4 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('firestore')}
+            className={`${activeTab === 'firestore' 
+              ? 'border-pink-500 text-pink-600' 
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} 
+              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <Database className="mr-2 h-5 w-5" />
+            Firestore Candidates
+          </button>
+          <button
+            onClick={() => setActiveTab('manatal')}
+            className={`${activeTab === 'manatal' 
+              ? 'border-pink-500 text-pink-600' 
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} 
+              whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+          >
+            <Cloud className="mr-2 h-5 w-5" />
+            Manatal Candidates
+          </button>
+        </nav>
       </div>
 
-      {/* Survey Results Modal */}
-      {showModal && selectedApplication && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 md:mx-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-800">
-                  Personality Survey Results: {selectedApplication.name}
-                </h3>
-                <button 
-                  onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              {selectedApplication.traitScores ? (
-                <div className="space-y-6">
-                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h4 className="font-medium text-gray-700 mb-2">Candidate Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      <p><span className="font-medium">Name:</span> {selectedApplication.name}</p>
-                      <p><span className="font-medium">Email:</span> {selectedApplication.email}</p>
-                      <p><span className="font-medium">Position:</span> {selectedApplication.position}</p>
-                      <p><span className="font-medium">Applied:</span> {formatDate(selectedApplication.timestamp)}</p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-4">Personality Trait Scores</h4>
-                    <div className="space-y-4">
-                      {Object.entries(selectedApplication.traitScores).map(([trait, score]) => {
-                        // Calculate the percentage for the progress bar (score is between 1-5)
-                        const percentage = (score / 5) * 100;
-                        
-                        // Determine color based on score
-                        let barColor = 'bg-blue-500';
-                        if (score >= 4) barColor = 'bg-green-500';
-                        else if (score <= 2) barColor = 'bg-red-500';
-                        else barColor = 'bg-yellow-500';
-                        
-                        // Format trait name for display
-                        const formatTraitName = (name: string) => {
-                          return name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, ' $1');
-                        };
-                        
-                        return (
-                          <div key={trait} className="bg-white p-4 rounded-lg shadow">
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-medium text-gray-700">{formatTraitName(trait)}</span>
-                              <span className="text-sm font-medium text-gray-700">{score.toFixed(1)} / 5</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div 
-                                className={`${barColor} h-2.5 rounded-full`} 
-                                style={{ width: `${percentage}%` }}
-                              ></div>
-                            </div>
-                            <p className="mt-2 text-sm text-gray-500">
-                              {trait === 'extraversion' && 'Sociability and energy in groups'}
-                              {trait === 'agreeableness' && 'Cooperation and empathy'}
-                              {trait === 'conscientiousness' && 'Organization and reliability'}
-                              {trait === 'openness' && 'Creativity and adaptability'}
-                              {trait === 'emotionalStability' && 'Resilience under stress'}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  <div className="pt-4 border-t border-gray-200">
-                    <h4 className="font-medium text-gray-700 mb-2">Overall Assessment</h4>
-                    <p className="text-gray-600">
-                      Based on the survey results, {selectedApplication.name} shows 
-                      {selectedApplication.traitScores.conscientiousness >= 4 ? ' strong attention to detail and reliability' : ''}
-                      {selectedApplication.traitScores.extraversion >= 4 ? ' excellent social and communication skills' : ''}
-                      {selectedApplication.traitScores.agreeableness >= 4 ? ' great teamwork and collaboration abilities' : ''}
-                      {selectedApplication.traitScores.openness >= 4 ? ' creativity and adaptability' : ''}
-                      {selectedApplication.traitScores.emotionalStability >= 4 ? ' good stress management' : ''}
-                      {Object.values(selectedApplication.traitScores).every(score => score < 4) ? ' areas for development across multiple traits' : ''}.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No survey data available for this candidate.</p>
-                </div>
-              )}
-              
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
-                >
-                  Close
-                </button>
+      {activeTab === 'firestore' ? (
+        stats.loading ? (
+          <div className="mt-6 flex justify-center">
+            <Loader className="h-12 w-12 text-pink-500 animate-spin" />
+            <span className="sr-only">Loading...</span>
+          </div>
+        ) : stats.error ? (
+          <div className="mt-6 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  {stats.error}
+                </p>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            {cards.map((card) => (
+              <Link
+                key={card.name}
+                href={card.href}
+                className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-300"
+              >
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className={`flex-shrink-0 rounded-md p-3 ${card.color}`}>
+                      <card.icon className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">
+                          {card.name}
+                        </dt>
+                        <dd>
+                          <div className="text-lg font-medium text-gray-900">
+                            {card.value}
+                          </div>
+                        </dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Recent Applications */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">Recent Applications</h2>
+              <Link 
+                href="/dashboard/applications" 
+                className="text-sm font-medium text-pink-600 hover:text-pink-500"
+              >
+                View all
+              </Link>
+            </div>
+            
+            <div className="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
+              {stats.recentApplications.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Applicant
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Position
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Location
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th scope="col" className="relative px-6 py-3">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {stats.recentApplications.map((application) => (
+                        <tr key={application.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {application.name}
+                                </div>
+                                <div className="text-sm text-gray-500 flex items-center">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {application.email}
+                                </div>
+                                {application.phone && (
+                                  <div className="text-sm text-gray-500 flex items-center">
+                                    <Phone className="h-3 w-3 mr-1" />
+                                    {application.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{application.position || 'Not specified'}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 flex items-center">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {application.location || 'Not specified'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(application.status)}`}>
+                              {application.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(application.timestamp)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <Link 
+                              href={`/dashboard/applications/${application.id}`}
+                              className="text-pink-600 hover:text-pink-900 flex items-center justify-end"
+                            >
+                              View <ExternalLink className="ml-1 h-3 w-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="px-4 py-6 text-center text-sm text-gray-500">
+                  No applications yet
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Survey Results */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">Recent Survey Results</h2>
+              <Link 
+                href="/dashboard/survey-results" 
+                className="text-sm font-medium text-pink-600 hover:text-pink-500"
+              >
+                View all
+              </Link>
+            </div>
+            
+            <div className="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">
+              {stats.recentSurveyResults.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Candidate
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Position
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Traits
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th scope="col" className="relative px-6 py-3">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {stats.recentSurveyResults.map((survey) => (
+                        <tr key={survey.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {survey.name || 'Anonymous'}
+                                </div>
+                                <div className="text-sm text-gray-500 flex items-center">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {survey.email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{survey.position || 'Not specified'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {Object.entries(survey.traitScores || {}).slice(0, 3).map(([trait, score], i) => (
+                                <div key={i} className="mb-1">
+                                  <span className="font-medium">{trait}:</span> {score}
+                                </div>
+                              ))}
+                              {Object.keys(survey.traitScores || {}).length > 3 && (
+                                <div className="text-xs text-gray-500">+ {Object.keys(survey.traitScores).length - 3} more traits</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(survey.timestamp)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <Link 
+                              href={`/dashboard/survey-results/${survey.id}`}
+                              className="text-pink-600 hover:text-pink-900 flex items-center justify-end"
+                            >
+                              View <ExternalLink className="ml-1 h-3 w-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="px-4 py-6 text-center text-sm text-gray-500">
+                  No survey results yet
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )
+      ) : (
+        // Manatal tab content
+        loadingManatal ? (
+          <div className="mt-6 flex justify-center">
+            <Loader className="h-12 w-12 text-pink-500 animate-spin" />
+            <span className="sr-only">Loading Manatal candidates...</span>
+          </div>
+        ) : manatalError ? (
+          <div className="mt-6 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <p className="text-sm text-red-700">
+                  {manatalError}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6">
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Manatal Candidates</h3>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                    Candidates imported from Manatal ATS
+                  </p>
+                </div>
+                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  {manatalCandidates.length} candidates
+                </span>
+              </div>
+              
+              {manatalCandidates.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Candidate
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Position
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Location
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {manatalCandidates.map((candidate) => (
+                        <tr key={candidate.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {candidate.full_name || `${candidate.first_name} ${candidate.last_name}`}
+                                </div>
+                                <div className="text-sm text-gray-500 flex items-center">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {candidate.email}
+                                </div>
+                                {candidate.phone && (
+                                  <div className="text-sm text-gray-500 flex items-center">
+                                    <Phone className="h-3 w-3 mr-1" />
+                                    {candidate.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{candidate.position_applied || 'Not specified'}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 flex items-center">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {candidate.location || 'Not specified'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(candidate.status)}`}>
+                              {candidate.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(candidate.created_at)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="px-4 py-6 text-center text-sm text-gray-500">
+                  No candidates found in Manatal
+                </div>
+              )}
+            </div>
+          </div>
+        )
       )}
     </div>
   );
