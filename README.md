@@ -107,3 +107,6 @@ pnpm start
 7. **Interview Scheduling**: Automatic Hireflix integration
 
 https://www.perplexity.ai/search/we-have-a-nextjs-application-w-WHT4Sw2zQ4SxWULzxZyllQ#0
+
+https://www.globalintern.golf/api/webhooks/hireflix
+https://3151b4c41be9.ngrok-free.app/api/webhooks/hireflix
