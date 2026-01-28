@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FirebaseService } from '../../../../services/firebase';
-import { Timestamp } from 'firebase/firestore';
+import { FirebaseAdminService } from '../../../../services/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 // Define the structure of the survey submission
 interface SurveySubmission {
@@ -10,6 +10,7 @@ interface SurveySubmission {
   position: string;
   answers: Record<string, Record<number, number>>;
   traitScores: Record<string, number>;
+  resume?: File;
 }
 
 // Categories for the survey
@@ -23,8 +24,44 @@ const CATEGORIES = [
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse the request body
-    const submission: SurveySubmission = await request.json();
+    let submission: SurveySubmission;
+    let resumeBuffer: Buffer | null = null;
+    let resumeFileName: string | null = null;
+
+    // Check if the request is multipart/form-data (for resume upload)
+    const contentType = request.headers.get('content-type') || '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle multipart form data
+      const formData = await request.formData();
+      
+      // Extract form fields
+      const candidateId = formData.get('candidateId') as string;
+      const name = formData.get('name') as string;
+      const email = formData.get('email') as string;
+      const position = formData.get('position') as string;
+      const answers = JSON.parse(formData.get('answers') as string);
+      const traitScores = JSON.parse(formData.get('traitScores') as string);
+      const resume = formData.get('resume') as File | null;
+
+      submission = {
+        candidateId,
+        name,
+        email,
+        position,
+        answers,
+        traitScores
+      };
+
+      // Handle resume upload if present
+      if (resume && resume.size > 0) {
+        resumeBuffer = Buffer.from(await resume.arrayBuffer());
+        resumeFileName = resume.name;
+      }
+    } else {
+      // Handle JSON data (existing behavior)
+      submission = await request.json();
+    }
     
     // Validate the submission
     if (!submission.email || !submission.answers) {
@@ -39,7 +76,8 @@ export async function POST(request: NextRequest) {
       name: submission.name,
       email: submission.email,
       position: submission.position,
-      traitScores: submission.traitScores
+      traitScores: submission.traitScores,
+      hasResume: !!resumeBuffer
     });
     
     // Save the survey data to Firebase
@@ -48,11 +86,27 @@ export async function POST(request: NextRequest) {
       let application = null;
       
       if (submission.email) {
-        application = await FirebaseService.getApplicationByEmail(submission.email);
+        application = await FirebaseAdminService.getApplicationByEmail(submission.email);
       }
       
       if (!application && submission.candidateId) {
-        application = await FirebaseService.getApplicationByCandidateId(submission.candidateId);
+        application = await FirebaseAdminService.getApplicationByCandidateId(submission.candidateId);
+      }
+
+      // Handle resume upload if present
+      let resumeUrl = null;
+      if (resumeBuffer && resumeFileName && submission.candidateId) {
+        try {
+          resumeUrl = await FirebaseAdminService.uploadResume(
+            resumeBuffer, 
+            resumeFileName, 
+            submission.candidateId
+          );
+          console.log('Resume uploaded successfully:', resumeUrl);
+        } catch (uploadError) {
+          console.error('Error uploading resume:', uploadError);
+          // Continue with survey submission even if resume upload fails
+        }
       }
       
       // Prepare survey data
@@ -64,26 +118,35 @@ export async function POST(request: NextRequest) {
         answers: submission.answers,
         traitScores: submission.traitScores,
         timestamp: Timestamp.now(),
-        applicationId: application?.id || null
+        applicationId: application?.id || null,
+        resumeUrl: resumeUrl
       };
       
       // Save survey to Firestore
-      const surveyId = await FirebaseService.saveSurveyResult(surveyData);
+      const surveyId = await FirebaseAdminService.saveSurveyResult(surveyData);
       
-      // If we found an application, update it with the survey completion info
+      // If we found an application, update it with the survey completion info and resume
       if (application && application.id) {
-        await FirebaseService.updateApplication(application.id, {
+        const updateData: any = {
           surveyCompleted: true,
           surveyId: surveyId,
           surveyCompletedAt: Timestamp.now(),
-          status: 'Survey Completed' // This field exists in the ApplicationData interface
-        });
+          status: 'Survey Completed'
+        };
+
+        // Add resume URL to application if uploaded
+        if (resumeUrl) {
+          updateData.resumeUrl = resumeUrl;
+        }
+
+        await FirebaseAdminService.updateApplication(application.id, updateData);
       }
       
       // Return success response with the survey ID
       return NextResponse.json({ 
         success: true,
         surveyId: surveyId,
+        resumeUrl: resumeUrl,
         message: 'Survey submitted successfully'
       });
     } catch (error) {

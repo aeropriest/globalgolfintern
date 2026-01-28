@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FirebaseService } from '../../../../services/firebase';
+import { FirebaseAdminService } from '../../../../services/firebase-admin';
 import { verify } from 'jsonwebtoken';
 
 // Mark this route as dynamic
@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
     }
     
     // Fetch data from Firebase
-    const applications = await FirebaseService.getApplications();
-    const quizResults = await FirebaseService.getQuizResults();
-    const surveyResults = await FirebaseService.getSurveyResults();
+    const applications = await FirebaseAdminService.getApplications();
+    const quizResults = await FirebaseAdminService.getQuizResults();
+    const surveyResults = await FirebaseAdminService.getSurveyResults();
     
     // Sort applications by timestamp (newest first)
     const sortedApplications = [...applications].sort((a, b) => {

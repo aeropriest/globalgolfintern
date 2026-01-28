@@ -14,28 +14,27 @@ import GradientButton from './GradientButton';
 import '../styles/gradient-inputs.css';
 
 
-type FormState = 'idle' | 'submitting' | 'success' | 'error' | 'existing';
+type FormState = 'idle' | 'submitting' | 'success' | 'error';
 
 const ApplicationForm: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
-  const [selectedPosition, setSelectedPosition] = useState('');
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [passportCountry, setPassportCountry] = useState('');
   const [golfHandicap, setGolfHandicap] = useState('');
   const [message, setMessage] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [formState, setFormState] = useState<FormState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [positions, setPositions] = useState<HireflixPosition[]>([]);
   const [loadingPositions, setLoadingPositions] = useState(true);
   const [showInterviewIframe, setShowInterviewIframe] = useState(false);
   const [interviewUrl, setInterviewUrl] = useState('');
   const [candidateId, setCandidateId] = useState<number | null>(null);
   const [interviewId, setInterviewId] = useState<string | null>(null);
-  const [existingCandidate, setExistingCandidate] = useState<any>(null);
-  const [checkingExisting, setCheckingExisting] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const router = useRouter();
 
@@ -55,51 +54,27 @@ const ApplicationForm: React.FC = () => {
     loadPositions();
   }, []);
 
-  // Check for existing candidate when email changes
-  const checkExistingCandidate = async (emailToCheck: string) => {
-    if (!emailToCheck || emailToCheck.length < 5) return;
-    
-    setCheckingExisting(true);
-    try {
-      const response = await fetch('/api/manatal/check-candidate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: emailToCheck }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.exists) {
-          console.log('✅ Found existing candidate:', data.candidate);
-          setExistingCandidate(data);
-          setFormState('existing');
-          setCandidateId(data.candidate.id);
-        } else {
-          setExistingCandidate(null);
-          if (formState === 'existing') {
-            setFormState('idle');
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking existing candidate:', error);
-    } finally {
-      setCheckingExisting(false);
-    }
+  // Email format validation
+  const validateEmailFormat = (emailToCheck: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailToCheck);
   };
 
-  // Debounced email check
+  // Check email format when email changes
   useEffect(() => {
     const timer = setTimeout(() => {
       if (email && formState !== 'submitting') {
-        checkExistingCandidate(email);
+        const isValid = validateEmailFormat(email);
+        if (!isValid) {
+          setEmailError('Please enter a valid email address');
+        } else {
+          setEmailError('');
+        }
       }
-    }, 1000); // Check after 1 second of no typing
-
+    }, 500); // Check after 500ms of no typing
+    
     return () => clearTimeout(timer);
-  }, [email]);
+  }, [email, formState]);
 
   // Listen for postMessage events to close iframe
   useEffect(() => {
@@ -191,6 +166,13 @@ const ApplicationForm: React.FC = () => {
       return;
     }
 
+    // Email format validation
+    if (!validateEmailFormat(email)) {
+      setErrorMessage('Please enter a valid email address.');
+      setFormState('error');
+      return;
+    }
+
     const nameParts = name.trim().split(/\s+/);
     const firstName = nameParts.shift() || '';
     const lastName = nameParts.join(' ') || firstName;
@@ -215,30 +197,41 @@ const ApplicationForm: React.FC = () => {
       
       // 3. Save application data and resume to Firebase
       try {
-        // Upload resume to Firebase Storage
+        // Upload resume to Firebase Storage (keep using client-side for now)
         const resumeUrl = await FirebaseService.uploadResume(resumeFile, candidateId.toString());
         
-        // Save application data to Firestore
-        await FirebaseService.saveApplication({
-          name,
-          email,
-          phone,
-          location,
-          position: selectedPositionData?.title,
-          positionId: selectedPosition,
-          resumeUrl,
-          resumeFile, // This will be removed before saving to Firestore
-          passportCountry,
-          golfHandicap,
-          message,
-          candidateId: candidateId.toString(),
-          status: 'Application Submitted',
-          timestamp: new Date(),
-          quizCompleted: false,
-          interviewCompleted: false
+        // Save application data to Firestore using server API
+        const response = await fetch('/api/applications/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            phone,
+            location,
+            position: selectedPositionData?.title,
+            positionId: selectedPosition,
+            resumeUrl,
+            resumeFile, // This will be removed before saving to Firestore
+            passportCountry,
+            golfHandicap,
+            message,
+            candidateId: candidateId.toString(),
+            status: 'Application Submitted',
+            timestamp: new Date(),
+            quizCompleted: false,
+            interviewCompleted: false
+          }),
         });
         
-        console.log('✅ Application data and resume saved to Firebase');
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Application data and resume saved to Firebase:', result.applicationId);
+        } else {
+          console.error('❌ Failed to save application to Firebase:', await response.text());
+        }
       } catch (firebaseError) {
         console.error('❌ Error saving to Firebase:', firebaseError);
         // Continue even if Firebase save fails
@@ -283,6 +276,33 @@ const ApplicationForm: React.FC = () => {
         };
         interviewMessage = 'There was an issue creating your interview. Our team will contact you shortly with next steps.';
         showIframe = false;
+      }
+
+      // Save interview URL to Firebase if available
+      if (interview.interview_url) {
+        try {
+          const response = await fetch('/api/applications/update-interview', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              candidateId: candidateId,
+              hireflixInterviewId: interview.id,
+              hireflixInterviewUrl: interview.interview_url,
+              hireflixInterviewStatus: interview.status || 'pending'
+            }),
+          });
+          
+          if (response.ok) {
+            console.log('✅ Interview URL saved to Firebase:', interview.interview_url);
+          } else {
+            console.warn('⚠️ Failed to save interview URL to Firebase');
+          }
+        } catch (firebaseError) {
+          console.warn('⚠️ Failed to save interview URL to Firebase:', firebaseError);
+          // Continue even if Firebase update fails
+        }
       }
 
       // 5. Send confirmation email (COMMENTED OUT FOR TESTING)
@@ -455,78 +475,6 @@ const ApplicationForm: React.FC = () => {
     );
   }
 
-  // If existing candidate found, show status
-  if (formState === 'existing' && existingCandidate) {
-    const candidate = existingCandidate.candidate;
-    const getStatusColor = (status: string) => {
-      switch (status) {
-        case 'interview_completed': return 'bg-green-50 border-green-200 text-green-800';
-        case 'interview_scheduled': return 'bg-blue-50 border-blue-200 text-blue-800';
-        default: return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-      }
-    };
-
-    const getStatusIcon = (status: string) => {
-      switch (status) {
-        case 'interview_completed': return '✅';
-        case 'interview_scheduled': return '📅';
-        default: return '📋';
-      }
-    };
-
-    return (
-      <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-xl w-full">
-        <div className="text-center mb-6">
-          <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">{getStatusIcon(existingCandidate.status)}</span>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back!</h2>
-          <p className="text-gray-600">{existingCandidate.ui_message}</p>
-        </div>
-
-        <div className="space-y-4 mb-6">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 mb-2">Application Details</h3>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p><strong>Name:</strong> {candidate.full_name}</p>
-              <p><strong>Email:</strong> {candidate.email}</p>
-              <p><strong>Position:</strong> {candidate.position_applied}</p>
-              <p><strong>Applied:</strong> {new Date(candidate.created_at).toLocaleDateString()}</p>
-            </div>
-          </div>
-
-          <div className={`rounded-lg p-4 border ${getStatusColor(existingCandidate.status)}`}>
-            <h3 className="font-semibold mb-2">Current Status</h3>
-            <p className="font-medium">{existingCandidate.message}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <GradientButton
-            onClick={() => router.push(`/status/${candidate.id}`)}
-            variant="filled"
-            size="md"
-            className="flex-1"
-          >
-            View Application Status
-          </GradientButton>
-          <GradientButton
-            onClick={() => {
-              setFormState('idle');
-              setExistingCandidate(null);
-              setEmail('');
-            }}
-            variant="outline"
-            size="md"
-            className="flex-1"
-          >
-            Apply with Different Email
-          </GradientButton>
-        </div>
-      </div>
-    );
-  }
-
   // We always want to show the interview iframe, never the success page
   if (false && formState === 'success' && !showInterviewIframe) {
     const statusMessage = localStorage.getItem(`interview_message_${candidateId}`);
@@ -632,29 +580,21 @@ const ApplicationForm: React.FC = () => {
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 text-left mb-2">
                     Email Address *
-                    {checkingExisting && (
+                    {emailError && (
                       <span className="ml-2 text-xs text-red-500">
-                        <Loader className="inline h-3 w-3 animate-spin mr-1" />
-                        Checking existing applications...
+                        {emailError}
                       </span>
                     )}
                   </label>
-                  <div className="relative">
-                    <input 
-                      type="email" 
-                      id="email" 
-                      value={email} 
-                      onChange={e => setEmail(e.target.value)} 
-                      required 
-                      className="w-full gradient-border-input text-gray-900 pr-10"
-                      disabled={formState === 'submitting'}
-                    />
-                    {checkingExisting && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                      </div>
-                    )}
-                  </div>
+                  <input 
+                    type="email" 
+                    id="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    required 
+                    className="w-full gradient-border-input text-gray-900"
+                    disabled={formState === 'submitting'}
+                  />
                 </div>
             </div>
             

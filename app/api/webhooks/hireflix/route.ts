@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HIREFLIX_API_KEY, MANATAL_API_TOKEN, RESEND_API_KEY, RESEND_FROM_EMAIL } from '../../../../config';
 import { createInterviewCompleteEmailHtml } from '../../../../services/email';
+import { FirebaseAdminService } from '../../../../services/firebase-admin';
 
 interface HireflixWebhookPayload {
   event: string;
@@ -299,11 +300,12 @@ async function processInterviewCompletion(payload: HireflixWebhookPayload) {
     const interviewId = payload.interview?.id;
     const candidateEmail = payload.interview?.candidate?.email;
     const candidateName = payload.interview?.candidate?.name;
+    const interviewUrl = payload.interview?.video_url || payload.interview?.share_url;
     
     console.log(`👤 Candidate: ${candidateName} (${candidateEmail})`);
     console.log(`🎬 Interview ID: ${interviewId}`);
     console.log(`🆔 External Candidate ID: ${candidateId || 'Not provided'}`);
-    console.log(`📹 Video URL: ${payload.interview?.video_url || 'Not available'}`);
+    console.log(`📹 Video URL: ${interviewUrl || 'Not available'}`);
     
     if (!candidateEmail) {
       console.warn('⚠️ No candidate email provided, cannot update Manatal');
@@ -317,20 +319,74 @@ async function processInterviewCompletion(payload: HireflixWebhookPayload) {
       const foundId = await findManatalCandidateByEmail(candidateEmail);
       manatalCandidateId = foundId || undefined;
     }
+
+    // Step 1: Update Firebase with interview completion data
+    await updateFirebaseWithInterviewResults(payload, manatalCandidateId);
     
-    // Step 1: Update Manatal with interview results
+    // Step 2: Update Manatal with interview results
     await updateManatalWithInterviewResults(payload, manatalCandidateId);
     
-    // Step 2: Send branded completion email
+    // Step 3: Send branded completion email
     // await sendBrandedCompletionEmail(payload);
     
-    // Step 3: Signal frontend to close iframe
+    // Step 4: Signal frontend to close iframe
     await signalInterviewComplete(payload, manatalCandidateId);
     
     console.log('✅ Interview completion processing finished');
     
   } catch (error) {
     console.error('❌ Error processing interview completion:', error);
+  }
+}
+
+// Update Firebase with interview results
+async function updateFirebaseWithInterviewResults(payload: HireflixWebhookPayload, candidateId?: string | null) {
+  try {
+    console.log('\n🔥 UPDATING FIREBASE WITH INTERVIEW RESULTS');
+    
+    const manatalCandidateId = candidateId || payload.external_id;
+    const interviewId = payload.interview?.id;
+    const interviewUrl = payload.interview?.video_url || payload.interview?.share_url;
+    const interviewStatus = payload.interview?.status || 'completed';
+    const completedAt = payload.interview?.completed_at;
+    
+    if (!manatalCandidateId) {
+      console.warn('⚠️ No candidate ID provided for Firebase update');
+      return;
+    }
+
+    // Prepare update data for Firebase
+    const updateData: any = {
+      hireflixInterviewId: interviewId,
+      hireflixInterviewStatus: interviewStatus,
+      interviewCompleted: true,
+      interviewCompletedAt: completedAt ? new Date(completedAt) : new Date(),
+      status: 'Interview Completed',
+      interviewUpdatedAt: new Date().toISOString()
+    };
+
+    // Add interview URL if available
+    if (interviewUrl) {
+      updateData.hireflixInterviewUrl = interviewUrl;
+      console.log('📹 Adding interview URL to Firebase:', interviewUrl);
+    }
+
+    // Add additional interview metadata
+    if (payload.interview?.position) {
+      updateData.positionId = payload.interview.position.id;
+      updateData.position = payload.interview.position.name;
+    }
+
+    console.log('📤 Firebase update data:', JSON.stringify(updateData, null, 2));
+
+    // Update application by candidate ID
+    await FirebaseAdminService.updateApplicationByCandidateId(manatalCandidateId, updateData);
+    
+    console.log('✅ Firebase application updated successfully with interview results');
+    
+  } catch (error) {
+    console.error('❌ Error updating Firebase with interview results:', error);
+    // Don't throw - continue with other steps even if Firebase update fails
   }
 }
 

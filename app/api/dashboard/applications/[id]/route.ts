@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FirebaseService } from '../../../../../services/firebase';
+import { FirebaseAdminService } from '../../../../../services/firebase-admin';
 import { verify } from 'jsonwebtoken';
 
 // Mark this route as dynamic
@@ -42,7 +42,7 @@ export async function GET(
     }
     
     // Fetch application from Firebase
-    const application = await FirebaseService.getApplicationById(id);
+    const application = await FirebaseAdminService.getApplicationById(id);
     
     if (!application) {
       return NextResponse.json(
@@ -97,7 +97,7 @@ export async function PUT(
     const updates = await request.json();
     
     // Check if application exists
-    const existingApplication = await FirebaseService.getApplicationById(id);
+    const existingApplication = await FirebaseAdminService.getApplicationById(id);
     if (!existingApplication) {
       return NextResponse.json(
         { error: 'Application not found' },
@@ -106,7 +106,7 @@ export async function PUT(
     }
     
     // Update application in Firebase
-    await FirebaseService.updateApplication(id, updates);
+    await FirebaseAdminService.updateApplication(id, updates);
     
     // Return success response
     return NextResponse.json({
@@ -139,7 +139,7 @@ export async function DELETE(
     }
     
     // Check if application exists
-    const existingApplication = await FirebaseService.getApplicationById(id);
+    const existingApplication = await FirebaseAdminService.getApplicationById(id);
     if (!existingApplication) {
       return NextResponse.json(
         { error: 'Application not found' },
@@ -148,7 +148,7 @@ export async function DELETE(
     }
     
     // Delete application from Firebase
-    await FirebaseService.deleteApplication(id);
+    await FirebaseAdminService.deleteApplication(id);
     
     // Return success response
     return NextResponse.json({

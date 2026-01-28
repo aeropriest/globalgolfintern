@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FirebaseService } from '../../../../services/firebase';
+import { FirebaseAdminService } from '../../../../services/firebase-admin';
 import { verify } from 'jsonwebtoken';
 
 // Mark this route as dynamic
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Fetch applications from Firebase
-    const applications = await FirebaseService.getApplications();
+    const applications = await FirebaseAdminService.getApplications();
     
     // Process applications for the response
     const processedApplications = applications.map(app => {

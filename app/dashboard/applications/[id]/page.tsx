@@ -44,6 +44,9 @@ interface Application {
   timestamp: string | Date;
   quizCompleted?: boolean;
   interviewCompleted?: boolean;
+  hireflixInterviewId?: string;
+  hireflixInterviewUrl?: string;
+  hireflixInterviewStatus?: string;
 }
 
 export default function ApplicationDetailPage({ params }: ApplicationDetailProps) {
@@ -505,6 +508,56 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailProps
                   </div>
                 ) : (
                   'No resume available'
+                )}
+              </dd>
+            </div>
+            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-5 w-5 text-gray-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+                Interview
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {application.interviewCompleted ? (
+                  <div className="space-y-2">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      ✓ Interview Completed
+                    </span>
+                    {application.hireflixInterviewUrl && (
+                      <div className="flex items-center space-x-2">
+                        <a
+                          href={application.hireflixInterviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-pink-600 hover:text-pink-500 flex items-center text-sm"
+                        >
+                          Watch Interview <ExternalLink className="ml-2 h-4 w-4" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : application.hireflixInterviewUrl ? (
+                  <div className="space-y-2">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      Interview in Progress
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <a
+                        href={application.hireflixInterviewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-pink-600 hover:text-pink-500 flex items-center text-sm"
+                      >
+                        View Interview <ExternalLink className="ml-2 h-4 w-4" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                    Interview Not Started
+                  </span>
                 )}
               </dd>
             </div>

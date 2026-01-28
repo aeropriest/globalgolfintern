@@ -26,6 +26,10 @@ interface Application {
   status?: string;
   timestamp: Date | any;
   candidateId?: string | number;
+  hireflixInterviewId?: string;
+  hireflixInterviewUrl?: string;
+  hireflixInterviewStatus?: string;
+  interviewCompleted?: boolean;
 }
 
 export default function ApplicationsPage() {
@@ -143,7 +147,7 @@ export default function ApplicationsPage() {
   // Export to CSV
   const exportToCSV = () => {
     // Create CSV content
-    const headers = ['Name', 'Email', 'Phone', 'Location', 'Position', 'Passport Country', 'Golf Handicap', 'Status', 'Date Applied'];
+    const headers = ['Name', 'Email', 'Phone', 'Location', 'Position', 'Passport Country', 'Golf Handicap', 'Status', 'Interview Status', 'Interview URL', 'Date Applied'];
     const rows = filteredApplications.map(app => [
       app.name,
       app.email,
@@ -153,6 +157,8 @@ export default function ApplicationsPage() {
       app.passportCountry || '',
       app.golfHandicap || '',
       app.status || '',
+      app.interviewCompleted ? 'Completed' : (app.hireflixInterviewUrl ? 'Pending' : 'Not Started'),
+      app.hireflixInterviewUrl || '',
       app.timestamp instanceof Date 
         ? app.timestamp.toLocaleDateString() 
         : new Date(app.timestamp).toLocaleDateString()
@@ -387,6 +393,9 @@ export default function ApplicationsPage() {
                             )}
                           </div>
                         </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Interview
+                        </th>
                         <th
                           scope="col"
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
@@ -438,6 +447,39 @@ export default function ApplicationsPage() {
                             }`}>
                               {application.status || 'Pending'}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {application.interviewCompleted ? (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-green-600">✓ Completed</span>
+                                  {application.hireflixInterviewUrl && (
+                                    <a 
+                                      href={application.hireflixInterviewUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-pink-600 hover:text-pink-900 flex items-center"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                  )}
+                                </div>
+                              ) : application.hireflixInterviewUrl ? (
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-yellow-600">Pending</span>
+                                  <a 
+                                    href={application.hireflixInterviewUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-pink-600 hover:text-pink-900 flex items-center"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">Not Started</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {application.timestamp instanceof Date 

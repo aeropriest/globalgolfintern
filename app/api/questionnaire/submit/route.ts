@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
-import { FirebaseService } from '../../../../services/firebase';
+import { FirebaseAdminService } from '../../../../services/firebase-admin';
 import { MANATAL_API_TOKEN } from '../../../../config';
 
 // Define the structure of the questionnaire submission
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
       
       // Save to Firestore
       try {
-        await FirebaseService.saveQuizResult({
+        await FirebaseAdminService.saveQuizResult({
           name: submission.name,
           email: submission.email,
           manatalUrl: submission.manatalUrl,
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
       
       // Try to save to Firestore even if Google Sheets fails
       try {
-        await FirebaseService.saveQuizResult({
+        await FirebaseAdminService.saveQuizResult({
           name: submission.name,
           email: submission.email,
           manatalUrl: submission.manatalUrl,
